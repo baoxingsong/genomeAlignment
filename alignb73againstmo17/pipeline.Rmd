@@ -1,0 +1,820 @@
+---
+title: "Comparsion different program by aligning Arabidopsis genome"
+author: "Baoxing Song"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+editor_options:
+  chunk_output_type: inline
+---
+
+
+
+```
+
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/gff3/zea_mays/Zea_mays.AGPv4.34.gff3.gz
+gunzip Zea_mays.AGPv4.34.gff3.gz
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/fasta/zea_mays/dna/Zea_mays.AGPv4.dna.toplevel.fa.gz
+gunzip Zea_mays.AGPv4.dna.toplevel.fa.gz
+wget https://download.maizegdb.org/Zm-Mo17-REFERENCE-CAU-1.0/Zm-Mo17-REFERENCE-CAU-1.0.fa.gz
+gunzip Zm-Mo17-REFERENCE-CAU-1.0.fa.gz
+sed -i 's/>chr/>/g' Zm-Mo17-REFERENCE-CAU-1.0.fa
+
+```
+
+Using AnchorWave to extract full-length CDS. \
+NOTE: please do NOT use CDS extracted using other software and do NOT use the output full-length CDS file for other purpose. Since AnchorWave filtered some CDS records to minimum the impact of minimap2 limitation on genome alignment that "Minimap2 often misses small exons" (https://github.com/lh3/minimap2#limitations)
+```
+anchorwave gff2seq -r Zea_mays.AGPv4.dna.toplevel.fa -i Zea_mays.AGPv4.34.gff3 -o cds.fa
+```
+
+Use minimap2 (https://github.com/lh3/minimap2) to map the extracted sequence to the reference B73 genome sequence and MO17 genomes
+```
+
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 Zm-Mo17-REFERENCE-CAU-1.0.fa cds.fa > cds.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 Zea_mays.AGPv4.dna.toplevel.fa cds.fa > ref.sam
+
+
+bedtools subtract -a all_reproducible_peaks_summits_merged.bed -b present_in_B73.absent_in_Mo17.bed > nontetfbs.bed
+
+```
+
+Perform genome alignment using AnchorWave
+```
+/usr/bin/time ./code/anchorwave genoAli -i Zea_mays.AGPv4.34.gff3 -as cds.fa -r Zea_mays.AGPv4.dna.toplevel.fa -a cds.sam -ar ref.sam -s Zm-Mo17-REFERENCE-CAU-1.0.fa -n anchors -o anchorwave.maf -f anchorwave.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 -IV >anchorwave.log 2>&1
+maf-convert sam anchorwave.maf | sed 's/Zea_mays.AGPv4.dna.toplevel.fa.//g' | sed 's/Zm-Mo17-REFERENCE-CAU-1.0.fa.//g' |  sed 's/[0-9]\+H//g' > anchorwave.sam
+cat anchorwave.sam | samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa - | samtools sort - > anchorwave.bam
+samtools index anchorwave.bam
+
+samtools depth anchorwave.bam | wc -l  # 2090331650
+samtools depth anchorwave.bam | awk '$3>0{print $0}' | wc -l # 1287780807
+
+samtools depth anchorwave.bam -b all_reproducible_peaks_summits_merged.bed | wc -l  #59769777
+samtools depth anchorwave.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l #53024408
+
+
+
+
+cat anchorwave.maf | maf-swap >anchorwave_swap.maf
+maf-convert sam anchorwave_swap.maf | sed 's/Zea_mays.AGPv4.dna.toplevel.fa.//g' | sed 's/Zm-Mo17-REFERENCE-CAU-1.0.fa.//g' |  sed 's/[0-9]\+H//g' > anchorwave_swap.sam
+samtools view -O BAM --reference Zm-Mo17-REFERENCE-CAU-1.0.fa anchorwave_swap.sam | samtools sort - > anchorwave_swap.bam
+samtools index anchorwave_swap.bam
+samtools depth anchorwave_swap.bam | wc -l  # 2089248993
+samtools depth anchorwave_swap.bam | awk '$3>0{print $0}' | wc -l # 1287780807
+
+
+samtools mpileup anchorwave.bam > anchorwave.mpileup
+perl checkAlignmentForEachBpv3.pl Zea_mays.AGPv4.dna.toplevel.fa anchorwave.mpileup
+MATCH:1236890422
+MISMATCH:50890385
+GAP:802550843
+multiplecovered:0
+
+
+perl evaluateTePavALignment.pl anchorwave.bam present_in_B73.absent_in_Mo17.withTSD.bed > anchorwave.bam_present_in_B73.absent_in_Mo17.withTSD.bed  #totalNUmber:7741 goodnumber:6726
+perl evaluateTePavALignment.pl anchorwave.bam allTEs.B73.withTSD.bed > anchorwave.bam_allTEs.B73.withTSD.bed #totalNUmber:341426 goodnumber:14404
+
+perl evaluateTePavALignment.pl anchorwave_swap.bam present_in_Mo17.absent_in_B73.withTSD.bed > anchorwave_swap.bam_present_in_Mo17.absent_in_B73.withTSD.bed #totalNUmber:7441 goodnumber:6455
+perl evaluateTePavALignment.pl anchorwave_swap.bam allTEs.Mo17.withTSD.bed > anchorwave_swap.bam_allTEs.Mo17.withTSD.bed #totalNUmber:305022 goodnumber:13917
+
+
+
+
+cat present_in_B73.absent_in_Mo17.homologyNoBoundaries.withTSD.bed present_in_B73.absent_in_Mo17.withTSD.bed | bedtools sort | bedtools merge | awk ' ($1 == "1" || $1 == "2" || $1 == "3" || $1 == "4" || $1 == "5" || $1 == "6" || $1 == "7" || $1 == "8" || $1 == "9" || $1 == "10") && $3>0{print $0}' > present_in_B73.absent_in_Mo17.bed
+
+samtools depth anchorwave.bam -b present_in_B73.absent_in_Mo17.bed | wc -l # 549639788
+samtools depth anchorwave.bam -b present_in_B73.absent_in_Mo17.bed | awk '$3>0' | wc -l #31855696
+
+
+samtools depth anchorwave.bam -b nontetfbs.bed | wc -l #58745944
+samtools depth anchorwave.bam -b nontetfbs.bed | awk '$3>0' | wc -l #52904712
+
+
+
+
+
+```
+
+```
+faidx -x Zea_mays.AGPv4.dna.toplevel.fa
+rm B73V4_ctg*.fa
+rm Mt.fa
+rm Pt.fa
+mv 1.fa B73_1.fa
+mv 2.fa B73_2.fa
+mv 3.fa B73_3.fa
+mv 4.fa B73_4.fa
+mv 5.fa B73_5.fa
+mv 6.fa B73_6.fa
+mv 7.fa B73_7.fa
+mv 8.fa B73_8.fa
+mv 9.fa B73_9.fa
+mv 10.fa B73_10.fa
+faidx -x Zm-Mo17-REFERENCE-CAU-1.0.fa
+rm scaffold*.fa
+mv 1.fa Mo17_1.fa
+mv 2.fa Mo17_2.fa
+mv 3.fa Mo17_3.fa
+mv 4.fa Mo17_4.fa
+mv 5.fa Mo17_5.fa
+mv 6.fa Mo17_6.fa
+mv 7.fa Mo17_7.fa
+mv 8.fa Mo17_8.fa
+mv 9.fa Mo17_9.fa
+mv 10.fa Mo17_10.fa
+
+```
+
+Perform genome alignment using minimap2 \
+Had problem to align the original genome fasta file, so split the genomes into each chrosomes and performed alignment for each chromosome seperatly.
+```
+/usr/bin/time minimap2 -x asm5 -t 5 -a B73_1.fa Mo17_1.fa > minimap2_asm5_1.sam 2> minimap2_asm5_1.log &
+/usr/bin/time minimap2 -x asm5 -t 5 -a B73_2.fa Mo17_2.fa > minimap2_asm5_2.sam 2> minimap2_asm5_2.log &
+/usr/bin/time minimap2 -x asm5 -t 5 -a B73_3.fa Mo17_3.fa > minimap2_asm5_3.sam 2> minimap2_asm5_3.log &
+/usr/bin/time minimap2 -x asm5 -t 5 -a B73_4.fa Mo17_4.fa > minimap2_asm5_4.sam 2> minimap2_asm5_4.log &
+/usr/bin/time minimap2 -x asm5 -t 5 -a B73_5.fa Mo17_5.fa > minimap2_asm5_5.sam 2> minimap2_asm5_5.log &
+/usr/bin/time minimap2 -x asm5 -t 5 -a B73_6.fa Mo17_6.fa > minimap2_asm5_6.sam 2> minimap2_asm5_6.log &
+/usr/bin/time minimap2 -x asm5 -t 5 -a B73_7.fa Mo17_7.fa > minimap2_asm5_7.sam 2> minimap2_asm5_7.log &
+/usr/bin/time minimap2 -x asm5 -t 5 -a B73_8.fa Mo17_8.fa > minimap2_asm5_8.sam 2> minimap2_asm5_8.log &
+/usr/bin/time minimap2 -x asm5 -t 5 -a B73_9.fa Mo17_9.fa > minimap2_asm5_9.sam 2> minimap2_asm5_9.log &
+/usr/bin/time minimap2 -x asm5 -t 5 -a B73_10.fa Mo17_10.fa > minimap2_asm5_10.sam 2> minimap2_asm5_10.log &
+
+
+/usr/bin/time minimap2 -x asm10 -t 5 -a B73_1.fa Mo17_1.fa > minimap2_asm10_1.sam 2> minimap2_asm10_1.log &
+/usr/bin/time minimap2 -x asm10 -t 5 -a B73_2.fa Mo17_2.fa > minimap2_asm10_2.sam 2> minimap2_asm10_2.log &
+/usr/bin/time minimap2 -x asm10 -t 5 -a B73_3.fa Mo17_3.fa > minimap2_asm10_3.sam 2> minimap2_asm10_3.log &
+/usr/bin/time minimap2 -x asm10 -t 5 -a B73_4.fa Mo17_4.fa > minimap2_asm10_4.sam 2> minimap2_asm10_4.log &
+/usr/bin/time minimap2 -x asm10 -t 5 -a B73_5.fa Mo17_5.fa > minimap2_asm10_5.sam 2> minimap2_asm10_5.log &
+/usr/bin/time minimap2 -x asm10 -t 5 -a B73_6.fa Mo17_6.fa > minimap2_asm10_6.sam 2> minimap2_asm10_6.log &
+/usr/bin/time minimap2 -x asm10 -t 5 -a B73_7.fa Mo17_7.fa > minimap2_asm10_7.sam 2> minimap2_asm10_7.log &
+/usr/bin/time minimap2 -x asm10 -t 5 -a B73_8.fa Mo17_8.fa > minimap2_asm10_8.sam 2> minimap2_asm10_8.log &
+/usr/bin/time minimap2 -x asm10 -t 5 -a B73_9.fa Mo17_9.fa > minimap2_asm10_9.sam 2> minimap2_asm10_9.log &
+/usr/bin/time minimap2 -x asm10 -t 5 -a B73_10.fa Mo17_10.fa > minimap2_asm10_10.sam 2> minimap2_asm10_10.log &
+
+
+/usr/bin/time minimap2 -x asm20 -t 5 -w 19 -a B73_1.fa Mo17_1.fa > minimap2_asm20_1.sam 2> minimap2_asm20_1.log &  # this was run slightly differently. Since using the preset parameter (-w 9), 2T memory is not big enough.
+/usr/bin/time minimap2 -x asm20 -t 5 -a B73_2.fa Mo17_2.fa > minimap2_asm20_2.sam 2> minimap2_asm20_2.log &
+/usr/bin/time minimap2 -x asm20 -t 5 -a B73_3.fa Mo17_3.fa > minimap2_asm20_3.sam 2> minimap2_asm20_3.log &
+/usr/bin/time minimap2 -x asm20 -t 5 -a B73_4.fa Mo17_4.fa > minimap2_asm20_4.sam 2> minimap2_asm20_4.log &
+/usr/bin/time minimap2 -x asm20 -t 5 -a B73_5.fa Mo17_5.fa > minimap2_asm20_5.sam 2> minimap2_asm20_5.log &
+/usr/bin/time minimap2 -x asm20 -t 5 -a B73_6.fa Mo17_6.fa > minimap2_asm20_6.sam 2> minimap2_asm20_6.log &
+/usr/bin/time minimap2 -x asm20 -t 5 -a B73_7.fa Mo17_7.fa > minimap2_asm20_7.sam 2> minimap2_asm20_7.log &
+/usr/bin/time minimap2 -x asm20 -t 5 -a B73_8.fa Mo17_8.fa > minimap2_asm20_8.sam 2> minimap2_asm20_8.log &
+/usr/bin/time minimap2 -x asm20 -t 5 -a B73_9.fa Mo17_9.fa > minimap2_asm20_9.sam 2> minimap2_asm20_9.log &
+/usr/bin/time minimap2 -x asm20 -t 5 -a B73_10.fa Mo17_10.fa > minimap2_asm20_10.sam 2> minimap2_asm20_10.log &
+
+
+
+cat minimap2_asm5_*.sam | grep -v "^@" > minimap2_asm5.sam
+anchorwave sam2maf -r Zea_mays.AGPv4.dna.toplevel.fa -q Zm-Mo17-REFERENCE-CAU-1.0.fa -s minimap2_asm5.sam -o minimap2_asm5.maf
+
+
+perl lastFinalToSplit.pl minimap2_asm5.maf >minimap2_asm5_forsplit.maf
+cat minimap2_asm5_forsplit.maf | last-split | maf-swap | last-split | maf-swap > minimap2_asm5_one_to_one.maf
+
+
+cat minimap2_asm5_one_to_one.maf | maf-swap > minimap2_asm5_one_to_one_swap.maf
+
+maf-convert sam minimap2_asm5_one_to_one.maf | sed 's/query.//g' | sed 's/col.//g' | sed 's/[0-9]\+H//g' > minimap2_asm5_one_to_one.sam
+samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa minimap2_asm5_one_to_one.sam | samtools sort - > minimap2_asm5_one_to_one.bam
+samtools index minimap2_asm5_one_to_one.bam
+samtools depth minimap2_asm5_one_to_one.bam | wc -l  # 1260379040
+samtools depth minimap2_asm5_one_to_one.bam | awk '$3>0{print $0}' | wc -l # 1258942176
+
+maf-convert sam minimap2_asm5_one_to_one_swap.maf | sed 's/query.//g' | sed 's/col.//g' | sed 's/[0-9]\+H//g' > minimap2_asm5_one_to_one_swap.sam
+samtools view -O BAM --reference Zm-Mo17-REFERENCE-CAU-1.0.fa minimap2_asm5_one_to_one_swap.sam | samtools sort - > minimap2_asm5_one_to_one_swap.bam
+samtools index minimap2_asm5_one_to_one_swap.bam
+samtools depth minimap2_asm5_one_to_one_swap.bam | wc -l  # 1260240477
+samtools depth minimap2_asm5_one_to_one_swap.bam | awk '$3>0{print $0}' | wc -l # 1258942176
+
+perl evaluateTePavALignment.pl minimap2_asm5_one_to_one.bam present_in_B73.absent_in_Mo17.withTSD.bed > minimap2_asm5_one_to_one.bam_present_in_B73.absent_in_Mo17.withTSD.bed  #totalNUmber: 7741 goodnumber: 0
+perl evaluateTePavALignment.pl minimap2_asm5_one_to_one.bam allTEs.B73.withTSD.bed > minimap2_asm5_one_to_one.bam_allTEs.B73.withTSD.bed #totalNUmber:341426 goodnumber:12
+
+
+
+perl evaluateTePavALignment.pl minimap2_asm5_one_to_one_swap.bam present_in_Mo17.absent_in_B73.withTSD.bed > minimap2_asm5_one_to_one_swap.bam_present_in_Mo17.absent_in_B73.withTSD.bed #totalNUmber:7441 goodnumber: 0
+perl evaluateTePavALignment.pl minimap2_asm5_one_to_one_swap.bam allTEs.Mo17.withTSD.bed > minimap2_asm5_one_to_one_swap.bam_allTEs.Mo17.withTSD.bed #totalNUmber:305022  goodnumber:22
+
+samtools mpileup minimap2_asm5_one_to_one.bam > minimap2_asm5_one_to_one.mpileup
+perl checkAlignmentForEachBpv3.pl Zea_mays.AGPv4.dna.toplevel.fa minimap2_asm5_one_to_one.mpileup
+
+#MATCH:1250306212
+#MISMATCH:8635964
+#GAP:1436864
+#multiplecovered:0
+
+
+
+
+
+cat minimap2_asm10_*.sam | grep -v "^@" > minimap2_asm10.sam
+anchorwave sam2maf -r Zea_mays.AGPv4.dna.toplevel.fa -q Zm-Mo17-REFERENCE-CAU-1.0.fa -s minimap2_asm10.sam -o minimap2_asm10.maf
+
+
+perl lastFinalToSplit.pl minimap2_asm10.maf >minimap2_asm10_forsplit.maf
+cat minimap2_asm10_forsplit.maf | last-split | maf-swap | last-split | maf-swap > minimap2_asm10_one_to_one.maf
+
+cat minimap2_asm10_one_to_one.maf | maf-swap > minimap2_asm10_one_to_one_swap.maf
+
+maf-convert sam minimap2_asm10_one_to_one.maf | sed 's/query.//g' | sed 's/col.//g' | sed 's/[0-9]\+H//g' > minimap2_asm10_one_to_one.sam
+samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa minimap2_asm10_one_to_one.sam | samtools sort - > minimap2_asm10_one_to_one.bam
+samtools index minimap2_asm10_one_to_one.bam
+samtools depth minimap2_asm10_one_to_one.bam | wc -l  # 1323703757
+samtools depth minimap2_asm10_one_to_one.bam | awk '$3>0{print $0}' | wc -l # 1321604280
+
+maf-convert sam minimap2_asm10_one_to_one_swap.maf | sed 's/query.//g' | sed 's/col.//g' | sed 's/[0-9]\+H//g' > minimap2_asm10_one_to_one_swap.sam
+samtools view -O BAM --reference Zm-Mo17-REFERENCE-CAU-1.0.fa minimap2_asm10_one_to_one_swap.sam | samtools sort - > minimap2_asm10_one_to_one_swap.bam
+samtools index minimap2_asm10_one_to_one_swap.bam
+samtools depth minimap2_asm10_one_to_one_swap.bam | wc -l  # 1323542313
+samtools depth minimap2_asm10_one_to_one_swap.bam | awk '$3>0{print $0}' | wc -l # 1321604280
+
+perl evaluateTePavALignment.pl minimap2_asm10_one_to_one.bam present_in_B73.absent_in_Mo17.withTSD.bed > minimap2_asm10_one_to_one.bam_present_in_B73.absent_in_Mo17.withTSD.bed  #totalNUmber: 7741 goodnumber: 0 (checked)
+perl evaluateTePavALignment.pl minimap2_asm10_one_to_one.bam allTEs.B73.withTSD.bed > minimap2_asm10_one_to_one.bam_allTEs.B73.withTSD.bed #totalNUmber:341426 goodnumber:22
+
+perl evaluateTePavALignment.pl minimap2_asm10_one_to_one_swap.bam present_in_Mo17.absent_in_B73.withTSD.bed > minimap2_asm10_one_to_one_swap.bam_present_in_Mo17.absent_in_B73.withTSD.bed #totalNUmber:7441 goodnumber: 0
+perl evaluateTePavALignment.pl minimap2_asm10_one_to_one_swap.bam allTEs.Mo17.withTSD.bed > minimap2_asm10_one_to_one_swap.bam_allTEs.Mo17.withTSD.bed #totalNUmber:305022  goodnumber:33
+
+samtools mpileup minimap2_asm10_one_to_one.bam > minimap2_asm10_one_to_one.mpileup
+perl checkAlignmentForEachBpv3.pl Zea_mays.AGPv4.dna.toplevel.fa minimap2_asm10_one_to_one.mpileup
+#MATCH:1309170052
+#MISMATCH:12434228
+#GAP:2099477
+#multiplecovered:0
+
+
+
+
+cat minimap2_asm20_*.sam | grep -v "^@" > minimap2_asm20.sam
+anchorwave sam2maf -r Zea_mays.AGPv4.dna.toplevel.fa -q Zm-Mo17-REFERENCE-CAU-1.0.fa -s minimap2_asm20.sam -o minimap2_asm20.maf
+
+perl lastFinalToSplit.pl minimap2_asm20.maf >minimap2_asm20_forsplit.maf
+cat minimap2_asm20_forsplit.maf | last-split | maf-swap | last-split | maf-swap > minimap2_asm20_one_to_one.maf
+cat minimap2_asm20_one_to_one.maf | maf-swap > minimap2_asm20_one_to_one_swap.maf
+
+maf-convert sam minimap2_asm20_one_to_one.maf | sed 's/query.//g' | sed 's/col.//g' | sed 's/[0-9]\+H//g' > minimap2_asm20_one_to_one.sam
+samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa minimap2_asm20_one_to_one.sam | samtools sort - > minimap2_asm20_one_to_one.bam
+samtools index minimap2_asm20_one_to_one.bam
+samtools depth minimap2_asm20_one_to_one.bam | wc -l  # 1341459046
+samtools depth minimap2_asm20_one_to_one.bam | awk '$3>0{print $0}' | wc -l # 1339103618
+
+
+
+maf-convert sam minimap2_asm20_one_to_one_swap.maf | sed 's/query.//g' | sed 's/col.//g' | sed 's/[0-9]\+H//g' > minimap2_asm20_one_to_one_swap.sam
+samtools view -O BAM --reference Zm-Mo17-REFERENCE-CAU-1.0.fa minimap2_asm20_one_to_one_swap.sam | samtools sort - > minimap2_asm20_one_to_one_swap.bam
+samtools index minimap2_asm20_one_to_one_swap.bam
+samtools depth minimap2_asm20_one_to_one_swap.bam | wc -l  # 1341292905
+samtools depth minimap2_asm20_one_to_one_swap.bam | awk '$3>0{print $0}' | wc -l # 1339103618
+
+perl evaluateTePavALignment.pl minimap2_asm20_one_to_one.bam present_in_B73.absent_in_Mo17.withTSD.bed > minimap2_asm20_one_to_one.bam_present_in_B73.absent_in_Mo17.withTSD.bed  #totalNUmber: 7741 goodnumber: 0 (checked)
+perl evaluateTePavALignment.pl minimap2_asm20_one_to_one.bam allTEs.B73.withTSD.bed > minimap2_asm20_one_to_one.bam_allTEs.B73.withTSD.bed #totalNUmber:341426 goodnumber:24
+
+perl evaluateTePavALignment.pl minimap2_asm20_one_to_one_swap.bam present_in_Mo17.absent_in_B73.withTSD.bed > minimap2_asm20_one_to_one_swap.bam_present_in_Mo17.absent_in_B73.withTSD.bed #totalNUmber:7441 goodnumber: 0
+perl evaluateTePavALignment.pl minimap2_asm20_one_to_one_swap.bam allTEs.Mo17.withTSD.bed > minimap2_asm20_one_to_one_swap.bam_allTEs.Mo17.withTSD.bed #totalNUmber:305022  goodnumber:34
+
+
+samtools mpileup minimap2_asm20_one_to_one.bam > minimap2_asm20_one_to_one.mpileup
+perl checkAlignmentForEachBpv3.pl Zea_mays.AGPv4.dna.toplevel.fa minimap2_asm20_one_to_one.mpileup
+
+MATCH:1324741676
+MISMATCH:14361942
+GAP:2355428
+multiplecovered:0
+
+
+
+samtools depth minimap2_asm5_one_to_one.bam -b present_in_B73.absent_in_Mo17.bed | wc -l # 81276748
+samtools depth minimap2_asm5_one_to_one.bam -b present_in_B73.absent_in_Mo17.bed | awk '$3>0' | wc -l #81133333
+
+
+samtools depth minimap2_asm10_one_to_one.bam -b present_in_B73.absent_in_Mo17.bed | wc -l # 101717986
+samtools depth minimap2_asm10_one_to_one.bam -b present_in_B73.absent_in_Mo17.bed | awk '$3>0' | wc -l #101434667
+
+
+samtools depth minimap2_asm20_one_to_one.bam -b present_in_B73.absent_in_Mo17.bed | wc -l # 108575782
+samtools depth minimap2_asm20_one_to_one.bam -b present_in_B73.absent_in_Mo17.bed | awk '$3>0' | wc -l #108220261
+
+
+samtools depth minimap2_asm5_one_to_one.bam -b all_reproducible_peaks_summits_merged.bed | wc -l  #46618885
+samtools depth minimap2_asm5_one_to_one.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l #46379573
+
+samtools depth minimap2_asm10_one_to_one.bam -b all_reproducible_peaks_summits_merged.bed | wc -l  #51209446
+samtools depth minimap2_asm10_one_to_one.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l #50834109
+
+samtools depth minimap2_asm20_one_to_one.bam -b all_reproducible_peaks_summits_merged.bed | wc -l  #52492106
+samtools depth minimap2_asm20_one_to_one.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l #52081601
+```
+
+
+
+Perform genome alignment using the LAST pipeline
+```
+# The header of MAF file do not compatible between the LAST pipeline and the chain pipeline. 
+# We implemented lastToMafComparsion.pl and lastFinalToSplit.pl to reformat the header of MAF files to make them compatible with the used software.
+
+
+
+lastdb -P 1 b73 Zea_mays.AGPv4.dna.toplevel.fa
+faToTwoBit Zea_mays.AGPv4.dna.toplevel.fa b73.2bit
+faSize -detailed Zea_mays.AGPv4.dna.toplevel.fa > b73.size
+
+
+lastal b73 Zm-Mo17-REFERENCE-CAU-1.0.fa > mo17_lastal.maf
+faSize -detailed Zm-Mo17-REFERENCE-CAU-1.0.fa > mo17.size
+faToTwoBit Zm-Mo17-REFERENCE-CAU-1.0.fa mo17.2bit
+maf-convert psl mo17_lastal.maf > mo17_lastal.psl
+axtChain -linearGap=loose -psl mo17_lastal.psl -faQ -faT Zea_mays.AGPv4.34.gff3 Zm-Mo17-REFERENCE-CAU-1.0.fa mo17_lastal.chain
+chainMergeSort mo17_lastal.chain > mo17_lastal.all.chain
+chainPreNet mo17_lastal.all.chain b73.size mo17.size mo17_lastal.preNet
+chainNet mo17_lastal.preNet b73.size mo17.size mo17_lastal.refTarget.net mo17_lastal.chainNet
+netToAxt mo17_lastal.refTarget.net mo17_lastal.preNet b73.2bit mo17.2bit stdout | axtSort stdin mo17_lastal.axt
+axtToMaf mo17_lastal.axt b73.size mo17.size mo17_lastal_final.maf -qPrefix=mo17. -tPrefix=b73.
+perl lastFinalToSplit.pl mo17_lastal_final.maf > mo17_lastal_final_forsplit.maf
+cat mo17_lastal.maf | last-split | maf-swap | last-split | maf-swap > mo17_lastal_split.maf
+cat mo17_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > mo17_lastal_final_split.maf
+perl lastToMafComparsion.pl mo17_lastal_split.maf > mo17_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl mo17_lastal_final_split.maf > mo17_lastal_final_split_Comparator.maf
+
+
+
+
+
+/usr/bin/time -v bash last.sh > last.log 2>&1
+
+lastdb -P 5 b731 B73_1.fa &
+lastdb -P 5 b732 B73_2.fa &
+lastdb -P 5 b733 B73_3.fa &
+lastdb -P 5 b734 B73_4.fa &
+lastdb -P 5 b735 B73_5.fa &
+lastdb -P 5 b736 B73_6.fa &
+lastdb -P 5 b737 B73_7.fa &
+lastdb -P 5 b738 B73_8.fa &
+lastdb -P 5 b739 B73_9.fa &
+lastdb -P 5 b7310 B73_10.fa &
+
+faToTwoBit B73_1.fa b731.2bit &
+faToTwoBit B73_2.fa b732.2bit &
+faToTwoBit B73_3.fa b733.2bit &
+faToTwoBit B73_4.fa b734.2bit &
+faToTwoBit B73_5.fa b735.2bit &
+faToTwoBit B73_6.fa b736.2bit &
+faToTwoBit B73_7.fa b737.2bit &
+faToTwoBit B73_8.fa b738.2bit &
+faToTwoBit B73_9.fa b739.2bit &
+faToTwoBit B73_10.fa b7310.2bit &
+
+faSize -detailed B73_1.fa > b731.size &
+faSize -detailed B73_2.fa > b732.size &
+faSize -detailed B73_3.fa > b733.size &
+faSize -detailed B73_4.fa > b734.size &
+faSize -detailed B73_5.fa > b735.size &
+faSize -detailed B73_6.fa > b736.size &
+faSize -detailed B73_7.fa > b737.size &
+faSize -detailed B73_8.fa > b738.size &
+faSize -detailed B73_9.fa > b739.size &
+faSize -detailed B73_10.fa > b7310.size &
+
+
+lastal b731 Mo17_1.fa > mo171_lastal.maf &
+lastal b732 Mo17_2.fa > mo172_lastal.maf &
+lastal b733 Mo17_3.fa > mo173_lastal.maf &
+lastal b734 Mo17_4.fa > mo174_lastal.maf &
+lastal b735 Mo17_5.fa > mo175_lastal.maf &
+lastal b736 Mo17_6.fa > mo176_lastal.maf &
+lastal b737 Mo17_7.fa > mo177_lastal.maf &
+lastal b738 Mo17_8.fa > mo178_lastal.maf &
+lastal b739 Mo17_9.fa > mo179_lastal.maf &
+lastal b7310 Mo17_10.fa > mo1710_lastal.maf &
+
+faToTwoBit Zea_mays.AGPv4.dna.toplevel.fa b73.2bit
+faSize -detailed Zea_mays.AGPv4.dna.toplevel.fa > b73.size
+
+faSize -detailed Zm-Mo17-REFERENCE-CAU-1.0.fa > mo17.size
+faToTwoBit Zm-Mo17-REFERENCE-CAU-1.0.fa mo17.2bit
+
+maf-convert psl mo171_lastal.maf > mo171_lastal.psl &
+maf-convert psl mo172_lastal.maf > mo172_lastal.psl &
+maf-convert psl mo173_lastal.maf > mo173_lastal.psl &
+maf-convert psl mo174_lastal.maf > mo174_lastal.psl &
+maf-convert psl mo175_lastal.maf > mo175_lastal.psl &
+maf-convert psl mo176_lastal.maf > mo176_lastal.psl &
+maf-convert psl mo177_lastal.maf > mo177_lastal.psl &
+maf-convert psl mo178_lastal.maf > mo178_lastal.psl &
+maf-convert psl mo179_lastal.maf > mo179_lastal.psl &
+maf-convert psl mo1710_lastal.maf > mo1710_lastal.psl &
+
+axtChain -linearGap=loose -psl mo171_lastal.psl -faQ -faT B73_1.fa Mo17_1.fa mo171_lastal.chain &
+axtChain -linearGap=loose -psl mo172_lastal.psl -faQ -faT B73_2.fa Mo17_2.fa mo172_lastal.chain &
+axtChain -linearGap=loose -psl mo173_lastal.psl -faQ -faT B73_3.fa Mo17_3.fa mo173_lastal.chain &
+axtChain -linearGap=loose -psl mo174_lastal.psl -faQ -faT B73_4.fa Mo17_4.fa mo174_lastal.chain &
+axtChain -linearGap=loose -psl mo175_lastal.psl -faQ -faT B73_5.fa Mo17_5.fa mo175_lastal.chain &
+axtChain -linearGap=loose -psl mo176_lastal.psl -faQ -faT B73_6.fa Mo17_6.fa mo176_lastal.chain &
+axtChain -linearGap=loose -psl mo177_lastal.psl -faQ -faT B73_7.fa Mo17_7.fa mo177_lastal.chain &
+axtChain -linearGap=loose -psl mo178_lastal.psl -faQ -faT B73_8.fa Mo17_8.fa mo178_lastal.chain &
+axtChain -linearGap=loose -psl mo179_lastal.psl -faQ -faT B73_9.fa Mo17_9.fa mo179_lastal.chain &
+axtChain -linearGap=loose -psl mo1710_lastal.psl -faQ -faT B73_10.fa Mo17_10.fa mo1710_lastal.chain &
+
+
+chainMergeSort mo171_lastal.chain > mo171_lastal.all.chain &
+chainMergeSort mo172_lastal.chain > mo172_lastal.all.chain &
+chainMergeSort mo173_lastal.chain > mo173_lastal.all.chain &
+chainMergeSort mo174_lastal.chain > mo174_lastal.all.chain &
+chainMergeSort mo175_lastal.chain > mo175_lastal.all.chain &
+chainMergeSort mo176_lastal.chain > mo176_lastal.all.chain &
+chainMergeSort mo177_lastal.chain > mo177_lastal.all.chain &
+chainMergeSort mo178_lastal.chain > mo178_lastal.all.chain &
+chainMergeSort mo179_lastal.chain > mo179_lastal.all.chain &
+chainMergeSort mo1710_lastal.chain > mo1710_lastal.all.chain &
+
+
+
+chainPreNet mo171_lastal.all.chain b73.size mo17.size mo171_lastal.preNet &
+chainPreNet mo172_lastal.all.chain b73.size mo17.size mo172_lastal.preNet &
+chainPreNet mo173_lastal.all.chain b73.size mo17.size mo173_lastal.preNet &
+chainPreNet mo174_lastal.all.chain b73.size mo17.size mo174_lastal.preNet &
+chainPreNet mo175_lastal.all.chain b73.size mo17.size mo175_lastal.preNet &
+chainPreNet mo176_lastal.all.chain b73.size mo17.size mo176_lastal.preNet &
+chainPreNet mo177_lastal.all.chain b73.size mo17.size mo177_lastal.preNet &
+chainPreNet mo178_lastal.all.chain b73.size mo17.size mo178_lastal.preNet &
+chainPreNet mo179_lastal.all.chain b73.size mo17.size mo179_lastal.preNet &
+chainPreNet mo1710_lastal.all.chain b73.size mo17.size mo1710_lastal.preNet &
+
+
+chainNet mo171_lastal.preNet b73.size mo17.size mo171_lastal.refTarget.net mo171_lastal.chainNet &
+chainNet mo172_lastal.preNet b73.size mo17.size mo172_lastal.refTarget.net mo172_lastal.chainNet &
+chainNet mo173_lastal.preNet b73.size mo17.size mo173_lastal.refTarget.net mo173_lastal.chainNet &
+chainNet mo174_lastal.preNet b73.size mo17.size mo174_lastal.refTarget.net mo174_lastal.chainNet &
+chainNet mo175_lastal.preNet b73.size mo17.size mo175_lastal.refTarget.net mo175_lastal.chainNet &
+chainNet mo176_lastal.preNet b73.size mo17.size mo176_lastal.refTarget.net mo176_lastal.chainNet &
+chainNet mo177_lastal.preNet b73.size mo17.size mo177_lastal.refTarget.net mo177_lastal.chainNet &
+chainNet mo178_lastal.preNet b73.size mo17.size mo178_lastal.refTarget.net mo178_lastal.chainNet &
+chainNet mo179_lastal.preNet b73.size mo17.size mo179_lastal.refTarget.net mo179_lastal.chainNet &
+chainNet mo1710_lastal.preNet b73.size mo17.size mo1710_lastal.refTarget.net mo1710_lastal.chainNet &
+
+
+netToAxt mo171_lastal.refTarget.net mo171_lastal.preNet b73.2bit mo17.2bit stdout | axtSort stdin mo171_lastal.axt &
+netToAxt mo172_lastal.refTarget.net mo172_lastal.preNet b73.2bit mo17.2bit stdout | axtSort stdin mo172_lastal.axt &
+netToAxt mo173_lastal.refTarget.net mo173_lastal.preNet b73.2bit mo17.2bit stdout | axtSort stdin mo173_lastal.axt &
+netToAxt mo174_lastal.refTarget.net mo174_lastal.preNet b73.2bit mo17.2bit stdout | axtSort stdin mo174_lastal.axt &
+netToAxt mo175_lastal.refTarget.net mo175_lastal.preNet b73.2bit mo17.2bit stdout | axtSort stdin mo175_lastal.axt &
+netToAxt mo176_lastal.refTarget.net mo176_lastal.preNet b73.2bit mo17.2bit stdout | axtSort stdin mo176_lastal.axt &
+netToAxt mo177_lastal.refTarget.net mo177_lastal.preNet b73.2bit mo17.2bit stdout | axtSort stdin mo177_lastal.axt &
+netToAxt mo178_lastal.refTarget.net mo178_lastal.preNet b73.2bit mo17.2bit stdout | axtSort stdin mo178_lastal.axt &
+netToAxt mo179_lastal.refTarget.net mo179_lastal.preNet b73.2bit mo17.2bit stdout | axtSort stdin mo179_lastal.axt &
+netToAxt mo1710_lastal.refTarget.net mo1710_lastal.preNet b73.2bit mo17.2bit stdout | axtSort stdin mo1710_lastal.axt &
+
+
+
+axtToMaf mo171_lastal.axt b73.size mo17.size mo171_lastal_final.maf -qPrefix=mo17. -tPrefix=b73. &
+axtToMaf mo172_lastal.axt b73.size mo17.size mo172_lastal_final.maf -qPrefix=mo17. -tPrefix=b73. &
+axtToMaf mo173_lastal.axt b73.size mo17.size mo173_lastal_final.maf -qPrefix=mo17. -tPrefix=b73. &
+axtToMaf mo174_lastal.axt b73.size mo17.size mo174_lastal_final.maf -qPrefix=mo17. -tPrefix=b73. &
+axtToMaf mo175_lastal.axt b73.size mo17.size mo175_lastal_final.maf -qPrefix=mo17. -tPrefix=b73. &
+axtToMaf mo176_lastal.axt b73.size mo17.size mo176_lastal_final.maf -qPrefix=mo17. -tPrefix=b73. &
+axtToMaf mo177_lastal.axt b73.size mo17.size mo177_lastal_final.maf -qPrefix=mo17. -tPrefix=b73. &
+axtToMaf mo178_lastal.axt b73.size mo17.size mo178_lastal_final.maf -qPrefix=mo17. -tPrefix=b73. &
+axtToMaf mo179_lastal.axt b73.size mo17.size mo179_lastal_final.maf -qPrefix=mo17. -tPrefix=b73. &
+axtToMaf mo1710_lastal.axt b73.size mo17.size mo1710_lastal_final.maf -qPrefix=mo17. -tPrefix=b73. &
+
+
+
+cp mo171_lastal_final.maf mo17Lastal_final.maf 
+grep -v "^#" mo172_lastal_final.maf >> mo17Lastal_final.maf
+grep -v "^#" mo173_lastal_final.maf >> mo17Lastal_final.maf
+grep -v "^#" mo174_lastal_final.maf >> mo17Lastal_final.maf
+grep -v "^#" mo175_lastal_final.maf >> mo17Lastal_final.maf
+grep -v "^#" mo176_lastal_final.maf >> mo17Lastal_final.maf
+grep -v "^#" mo177_lastal_final.maf >> mo17Lastal_final.maf
+grep -v "^#" mo178_lastal_final.maf >> mo17Lastal_final.maf
+grep -v "^#" mo179_lastal_final.maf >> mo17Lastal_final.maf
+grep -v "^#" mo1710_lastal_final.maf >> mo17Lastal_final.maf
+
+
+perl lastFinalToSplit.pl mo17Lastal_final.maf > mo17_lastal_final_forsplit.maf
+cat mo17_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > mo17_lastal_final_split.maf
+
+maf-convert sam mo17_lastal_final_split.maf > mo17_lastal_final_split.sam ; sed -i 's/mo17.//g' mo17_lastal_final_split.sam; sed -i 's/b73.//g' mo17_lastal_final_split.sam
+sed -i 's/[0-9]\+H//g' mo17_lastal_final_split.sam
+samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa mo17_lastal_final_split.sam | samtools sort - > mo17_lastal_final_split.bam; samtools index mo17_lastal_final_split.bam
+
+samtools index mo17_lastal_final_split.bam
+samtools depth mo17_lastal_final_split.bam | wc -l  # 1541990862
+samtools depth mo17_lastal_final_split.bam | awk ' ($1 == "1" || $1 == "2" || $1 == "3" || $1 == "4" || $1 == "5" || $1 == "6" || $1 == "7" || $1 == "8" || $1 == "9" || $1 == "10"){print $0}' | wc -l #1541990862
+
+samtools depth mo17_lastal_final_split.bam | awk '$3>0{print $0}' | wc -l # 1538037809
+samtools depth mo17_lastal_final_split.bam | awk ' ($1 == "1" || $1 == "2" || $1 == "3" || $1 == "4" || $1 == "5" || $1 == "6" || $1 == "7" || $1 == "8" || $1 == "9" || $1 == "10") && $3>0{print $0}' | wc -l #1538037809
+
+
+
+
+
+cat mo17_lastal_final_split.maf | maf-swap >mo17_lastal_final_split_swap.maf
+maf-convert sam mo17_lastal_final_split_swap.maf | sed 's/mo17.//g' | sed 's/b73.//g' | sed 's/[0-9]\+H//g' > mo17_lastal_final_split_swap.sam
+
+samtools view -O BAM --reference Zm-Mo17-REFERENCE-CAU-1.0.fa mo17_lastal_final_split_swap.sam | samtools sort - > mo17_lastal_final_split_swap.bam
+samtools index mo17_lastal_final_split_swap.bam
+samtools depth mo17_lastal_final_split_swap.bam | wc -l  # 1541737246
+samtools depth mo17_lastal_final_split_swap.bam | awk ' ($1 == "1" || $1 == "2" || $1 == "3" || $1 == "4" || $1 == "5" || $1 == "6" || $1 == "7" || $1 == "8" || $1 == "9" || $1 == "10"){print $0}' | wc -l  # 1541737246
+
+samtools depth mo17_lastal_final_split_swap.bam | awk '$3>0{print $0}' | wc -l # 1538037809
+samtools depth mo17_lastal_final_split_swap.bam | awk ' ($1 == "1" || $1 == "2" || $1 == "3" || $1 == "4" || $1 == "5" || $1 == "6" || $1 == "7" || $1 == "8" || $1 == "9" || $1 == "10"){print $0}' | awk '$3>0{print $0}' | wc -l # 1538037809
+
+
+perl evaluateTePavALignment.pl mo17_lastal_final_split.bam present_in_B73.absent_in_Mo17.withTSD.bed > mumer_one_to_one.bam_present_in_B73.absent_in_Mo17.withTSD.bed  #totalNUmber:7741 goodnumber:0
+perl evaluateTePavALignment.pl mo17_lastal_final_split.bam allTEs.B73.withTSD.bed > mumer_one_to_one.bam_allTEs.B73.withTSD.bed #totalNUmber:341426 goodnumber:25
+
+
+
+perl evaluateTePavALignment.pl mo17_lastal_final_split_swap.bam present_in_Mo17.absent_in_B73.withTSD.bed > mumer_one_to_one_swap.bam_present_in_Mo17.absent_in_B73.withTSD.bed #totalNUmber:7441 goodnumber: 0
+perl evaluateTePavALignment.pl mo17_lastal_final_split_swap.bam allTEs.Mo17.withTSD.bed > mumer_one_to_one_swap.bam_allTEs.Mo17.withTSD.bed #totalNUmber: 305022 goodnumber: 16
+
+
+
+
+samtools mpileup mo17_lastal_final_split.bam > mo17_lastal_final_split.mpileup
+perl checkAlignmentForEachBpv3.pl Zea_mays.AGPv4.dna.toplevel.fa mo17_lastal_final_split.mpileup
+
+#MATCH:1495004449
+#MISMATCH:43033360
+#GAP:3953053
+#multiplecovered:0
+
+samtools depth mo17_lastal_final_split.bam -b all_reproducible_peaks_summits_merged.bed | wc -l  #55498500
+samtools depth mo17_lastal_final_split.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l #55049026
+
+samtools depth mo17_lastal_final_split.bam -b nontetfbs.bed | wc -l  #55498500
+samtools depth mo17_lastal_final_split.bam -b nontetfbs.bed | awk '$3>0{print $0}' | wc -l #55049026
+
+
+
+samtools depth mo17_lastal_final_split.bam -b present_in_B73.absent_in_Mo17.bed | wc -l # 217385381
+samtools depth mo17_lastal_final_split.bam -b present_in_B73.absent_in_Mo17.bed | awk '$3>0' | wc -l #216167137
+
+
+```
+
+
+Perform genome alignment using MUMmer4
+```
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.short.sam Zea_mays.AGPv4.dna.toplevel.fa Zm-Mo17-REFERENCE-CAU-1.0.fa > nucmer.log 2>&1
+anchorwave sam2maf -r Zea_mays.AGPv4.dna.toplevel.fa -q Zm-Mo17-REFERENCE-CAU-1.0.fa -s mumer.short.sam -o mumer.short.maf
+perl lastFinalToSplit.pl mumer.short.maf >mumer.short.maf_forsplit.maf
+
+cat mumer.short.maf_forsplit.maf | last-split | maf-swap | last-split | maf-swap > mumer_one_to_one.maf  # this command costs several several hundreds of G bytes memory
+cat mumer_one_to_one.maf | maf-swap > mumer_one_to_one_swap.maf
+
+maf-convert sam mumer_one_to_one.maf | sed 's/query.//g' | sed 's/col.//g' | sed 's/[0-9]\+H//g' > mumer_one_to_one.sam
+samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa mumer_one_to_one.sam | samtools sort - > mumer_one_to_one.bam
+samtools index mumer_one_to_one.bam
+samtools depth mumer_one_to_one.bam | wc -l  # 1429355157
+samtools depth mumer_one_to_one.bam | awk ' ($1 == "1" || $1 == "2" || $1 == "3" || $1 == "4" || $1 == "5" || $1 == "6" || $1 == "7" || $1 == "8" || $1 == "9" || $1 == "10"){print $0}' | wc -l #1417229450
+
+samtools depth mumer_one_to_one.bam | awk '$3>0{print $0}' | wc -l # 1427370312
+samtools depth mumer_one_to_one.bam | awk ' ($1 == "1" || $1 == "2" || $1 == "3" || $1 == "4" || $1 == "5" || $1 == "6" || $1 == "7" || $1 == "8" || $1 == "9" || $1 == "10") && $3>0{print $0}' | wc -l #1415256619
+
+
+
+maf-convert sam mumer_one_to_one_swap.maf | sed 's/query.//g' | sed 's/col.//g' | sed 's/[0-9]\+H//g' > mumer_one_to_one_swap.sam
+samtools view -O BAM --reference Zm-Mo17-REFERENCE-CAU-1.0.fa mumer_one_to_one_swap.sam | samtools sort - > mumer_one_to_one_swap.bam
+samtools index mumer_one_to_one_swap.bam
+samtools depth mumer_one_to_one_swap.bam | wc -l  # 1429130872
+samtools depth mumer_one_to_one_swap.bam | awk '$3>0{print $0}' | wc -l # 1427370312
+
+
+
+
+perl evaluateTePavALignment.pl mumer_one_to_one.bam present_in_B73.absent_in_Mo17.withTSD.bed > mumer_one_to_one.bam_present_in_B73.absent_in_Mo17.withTSD.bed  #totalNUmber:7741 goodnumber:0
+perl evaluateTePavALignment.pl mumer_one_to_one.bam allTEs.B73.withTSD.bed > mumer_one_to_one.bam_allTEs.B73.withTSD.bed #totalNUmber:341426 goodnumber:12
+
+
+
+perl evaluateTePavALignment.pl mumer_one_to_one_swap.bam present_in_Mo17.absent_in_B73.withTSD.bed > mumer_one_to_one_swap.bam_present_in_Mo17.absent_in_B73.withTSD.bed #totalNUmber:7441 goodnumber: 0
+perl evaluateTePavALignment.pl mumer_one_to_one_swap.bam allTEs.Mo17.withTSD.bed > mumer_one_to_one_swap.bam_allTEs.Mo17.withTSD.bed #totalNUmber: 305022 goodnumber: 24
+
+
+samtools mpileup mumer_one_to_one.bam > mumer_one_to_one.mpileup
+perl checkAlignmentForEachBpv3.pl Zea_mays.AGPv4.dna.toplevel.fa mumer_one_to_one.mpileup
+
+#MATCH:1413156050
+#MISMATCH:14214262
+#GAP:1984845
+#multiplecovered:0
+
+
+samtools depth mumer_one_to_one.bam -b present_in_B73.absent_in_Mo17.bed | wc -l # 151734823
+samtools depth mumer_one_to_one.bam -b present_in_B73.absent_in_Mo17.bed | awk '$3>0' | wc -l #151524911
+
+samtools depth mumer_one_to_one.bam -b all_reproducible_peaks_summits_merged.bed | wc -l  #53935775
+samtools depth mumer_one_to_one.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l #53550120
+
+```
+
+Perform genome alignment using GSAlign
+```
+/usr/bin/time GSAlign -r Zea_mays.AGPv4.dna.toplevel.fa -q Zm-Mo17-REFERENCE-CAU-1.0.fa -t 1 -o gsalign -fmt 1 > GSAlign.log 2>&1
+perl lastFinalToSplit.pl gsalign.maf > gsalign_forsplit.maf
+cat gsalign_forsplit.maf | last-split | maf-swap | last-split | maf-swap > gsalign_one_to_one.maf
+
+
+cat gsalign_one_to_one.maf | maf-swap > gsalign_one_to_one_swap.maf
+
+maf-convert sam gsalign_one_to_one.maf | sed 's/qry.//g' | sed 's/ref.//g' | sed 's/[0-9]\+H//g' > gsalign.sam
+samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa gsalign.sam | samtools sort - > gsalign.bam
+samtools index gsalign.bam
+samtools depth gsalign.bam | wc -l  # 1340810401
+samtools depth gsalign.bam | awk '$3>0{print $0}' | wc -l # 1338821818
+
+
+samtools depth gsalign.bam | awk ' ($1 == "1" || $1 == "2" || $1 == "3" || $1 == "4" || $1 == "5" || $1 == "6" || $1 == "7" || $1 == "8" || $1 == "9" || $1 == "10")' | wc -l  # 1328318900
+samtools depth gsalign.bam | awk ' ($1 == "1" || $1 == "2" || $1 == "3" || $1 == "4" || $1 == "5" || $1 == "6" || $1 == "7" || $1 == "8" || $1 == "9" || $1 == "10") && $3>0{print $0}' | wc -l # 1326343459
+
+
+maf-convert sam gsalign_one_to_one_swap.maf | sed 's/qry.//g' | sed 's/ref.//g' | sed 's/[0-9]\+H//g' > gsalign_one_to_one_swap.sam
+samtools view -O BAM --reference Zm-Mo17-REFERENCE-CAU-1.0.fa gsalign_one_to_one_swap.sam | samtools sort - > gsalign_one_to_one_swap.bam
+samtools index gsalign_one_to_one_swap.bam
+samtools depth gsalign_one_to_one_swap.bam | wc -l  # 1340668751
+samtools depth gsalign_one_to_one_swap.bam | awk '$3>0{print $0}' | wc -l # 1338821818
+
+
+
+
+
+perl evaluateTePavALignment.pl gsalign.bam present_in_B73.absent_in_Mo17.withTSD.bed > gsalign.bam_present_in_B73.absent_in_Mo17.withTSD.bed  #totalNUmber:7741 goodnumber:0
+perl evaluateTePavALignment.pl gsalign.bam allTEs.B73.withTSD.bed > gsalign.bam_allTEs.B73.withTSD.bed #totalNUmber:341426 goodnumber:18
+
+
+
+perl evaluateTePavALignment.pl gsalign_one_to_one_swap.bam present_in_Mo17.absent_in_B73.withTSD.bed > gsalign_one_to_one_swap.bam_present_in_Mo17.absent_in_B73.withTSD.bed #totalNUmber: goodnumber:
+perl evaluateTePavALignment.pl gsalign_one_to_one_swap.bam allTEs.Mo17.withTSD.bed > gsalign_one_to_one_swap.bam_allTEs.Mo17.withTSD.bed #totalNUmber:305022 goodnumber:24
+
+samtools mpileup gsalign.bam > gsalign.mpileup
+perl checkAlignmentForEachBpv3.pl Zea_mays.AGPv4.dna.toplevel.fa gsalign.mpileup
+
+#MATCH:1326346552
+#MISMATCH:12475266
+#GAP:1988583
+#multiplecovered:0
+
+
+
+samtools depth gsalign.bam -b present_in_B73.absent_in_Mo17.bed | wc -l # 125772195
+samtools depth gsalign.bam -b present_in_B73.absent_in_Mo17.bed | awk '$3>0' | wc -l # 125484415
+
+
+samtools depth gsalign.bam -b all_reproducible_peaks_summits_merged.bed | wc -l  #50414943
+samtools depth gsalign.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l #50052250
+
+
+```
+``` {r}
+library(ggplot2)
+data = read.table("coverage")
+library(ggpattern)
+
+totalGenomeLength = read.table("Zea_mays.AGPv4.dna.toplevel.fa.fai")
+totalGenomeLength = head(totalGenomeLength, 10)
+totalGenomeLength = sum(totalGenomeLength$V2)
+data$coverage = data$V3/totalGenomeLength
+
+
+totalTELength = read.table("present_in_B73.absent_in_Mo17.bed")
+totalTELength = sum(abs(totalTELength$V3-totalTELength$V2))
+datTE = rbind( data.frame(approach=data$V2, proportion=data$V4, category = "position match"), data.frame(approach=data$V2, proportion=(data$V3-data$V4), category = "gap"),  data.frame(approach=data$V2, proportion=(totalTELength-data$V3), category = "unaligned") )
+datTE$category = factor(datTE$category, levels=c("unaligned", "gap", "position match"))
+
+
+dat = rbind( 
+data.frame(approach=data$V2, proportion=(data$V4-data$V6)/totalGenomeLength, c="6non-TE position match", category = "position match", region="Non-TE_PAV"), 
+data.frame(approach=data$V2, proportion=data$V6/totalGenomeLength, c="5TE position match", category = "position match", region="TE_PAV"), 
+data.frame(approach=data$V2, proportion=(data$V3-data$V4 - data$V5  + data$V6)/totalGenomeLength, c="3non-TE gap", category = "gap", region="Non-TE_PAV"),  
+data.frame(approach=data$V2, proportion=(data$V5-data$V6)/totalGenomeLength, c="4TE gap", category = "gap", region="TE_PAV"),
+data.frame(approach=data$V2, proportion=(totalGenomeLength-data$V3-totalTELength+data$V5)/totalGenomeLength, c="2non-TE unaligned", category = "unaligned", region="Non-TE_PAV"),
+data.frame(approach=data$V2, proportion=(totalTELength-data$V5)/totalGenomeLength, c="1TE unaligned", category = "unaligned", region="TE_PAV") )
+
+
+dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
+dat$c = factor(dat$c, levels=c("1TE unaligned", "2non-TE unaligned", "3non-TE gap", "4TE gap", "5TE position match", "6non-TE position match"))
+dat$region = factor(dat$region)
+dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST+one-to-one",  "MUMmer4", "GSAlign"))
+print(dat)
+p = ggplot(data=dat, aes(x=approach, y=proportion, fill=c, pattern = region)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1","#54AEE1", "#92A000",  "#92A000", "#EF8600", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+  labs(x="", y="Proportion of B73 \n genome aligned to Mo17", title="")+
+   geom_bar_pattern( stat="identity", color = "black",  pattern_fill = "black",
+                   pattern_angle = 45,
+                   pattern_density = 0.1,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.6) +
+                   scale_pattern_manual(values = c(TE_PAV = "stripe", TE_PAV = "none")) +
+            theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+              axis.line = element_blank(),
+        legend.position = "top",
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+        
+            panel.background = element_blank(),
+            axis.text.y = element_text( colour = "black"),
+            axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "mo17_genome_aligned"
+png(paste(file, ".png", sep=""), width=640, height=560)
+print(p)
+dev.off()
+pdf(paste(file, ".pdf", sep=""), width=8, height=7)
+print(p)
+dev.off()
+# I could not plot this figure as what I expected. I modified the output figure for publication purpose
+
+
+
+library(ggplot2)
+data = read.table("TEcoverage")
+totalTELength = read.table("present_in_B73.absent_in_Mo17.bed")
+totalTELength = sum(abs(totalTELength$V3-totalTELength$V2))
+dat = rbind( data.frame(approach=data$V2, proportion=data$V4, category = "position match"), data.frame(approach=data$V2, proportion=(data$V3-data$V4), category = "gap"),  data.frame(approach=data$V2, proportion=(totalTELength-data$V3), category = "unaligned") )
+dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
+
+dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST+one-to-one",  "MUMmer4", "GSAlign"))
+print(dat)
+p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+  labs(x="", y="Number of basepairs in\nTE present in B73\nand absent in Mo17\nbeing aligned (bp)", title="")+
+            theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+              axis.line = element_blank(),
+        legend.position = "top",
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+        
+            panel.background = element_blank(),
+            axis.text.y = element_text( colour = "black"),
+            axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "B73_TE_aligned_v0"
+png(paste(file, ".png", sep=""), width=640, height=560)
+print(p)
+dev.off()
+pdf(paste(file, ".pdf", sep=""), width=8, height=7)
+print(p)
+dev.off()
+
+
+
+
+
+
+data$coverage = data$V3/totalTELength
+
+
+dat = rbind( data.frame(approach=data$V2, proportion=data$V4/totalTELength, category = "position match"), data.frame(approach=data$V2, proportion=(data$V3-data$V4)/totalTELength, category = "gap"),  data.frame(approach=data$V2, proportion=(totalTELength-data$V3)/totalTELength, category = "unaligned") )
+dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
+
+dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST+one-to-one",  "MUMmer4", "GSAlign"))
+print(dat)
+p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+  labs(x="", y="Proportion of TE\npresent in B73\nand absent in Mo17\nbeing aligned", title="")+
+            theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+              axis.line = element_blank(),
+        legend.position = "top",
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+        
+            panel.background = element_blank(),
+            axis.text.y = element_text( colour = "black"),
+            axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "B73_TE_aligned"
+png(paste(file, ".png", sep=""), width=640, height=560)
+print(p)
+dev.off()
+pdf(paste(file, ".pdf", sep=""), width=8, height=7)
+print(p)
+dev.off()
+
+
+library(ggplot2)
+data = read.table("TErecall")
+View(data)
+data[which(data$V2=="known"),]$V3 = -data[which(data$V2=="known"),]$V3 
+commapos <- function(x, ...) {
+     format(abs(x), big.mark = ",", trim = TRUE,
+         scientific = TRUE, ...)
+ }
+ggplot(data, aes(x = V1, y = V3, fill = V2)) +  geom_col() + scale_y_continuous(labels = commapos) + coord_trans( y = "log10")
+
+```
+
+

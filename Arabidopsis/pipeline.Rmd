@@ -1,0 +1,1990 @@
+---
+title: "Comparsion different program by aligning Arabidopsis genome"
+author: "Baoxing Song"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+editor_options:
+  chunk_output_type: inline
+---
+
+
+Prepare the TAIR10 reference genome sequence in fasta format and genome annotation in gff format
+```
+wget https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_gff3/TAIR10_GFF3_genes.gff
+wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr1.fas
+wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr2.fas
+wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr3.fas
+wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr4.fas
+wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr5.fas
+cat TAIR10_chr1.fas TAIR10_chr2.fas TAIR10_chr3.fas TAIR10_chr4.fas TAIR10_chr5.fas > tair10.fa
+```
+
+
+Download the sdi files for 18 Arabidopsis inbreeding lines
+```
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/bur_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/can_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/ct_1.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/edi_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/hi_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/kn_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/ler_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/mt_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/no_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/oy_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/po_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/rsch_4.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/sf_2.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/tsu_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/wil_2.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/ws_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/wu_0.v7c.sdi
+wget http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/variants.SDI/zu_0.v7c.sdi
+```
+
+Generate synthesis genome sequences using the software GEAN https://github.com/baoxingsong/GEAN/ \
+PLEASE NOTE: GEAN gave error message with the downloaded SDI file for ler_0 no_0 and oy_0.
+We removed the records
+```
+Chr4	6020491	12	AAGACATCAATATCATCAGGAAAAATACTCATTCTATTATTAG	TAATGACTTAGAGAATAAACTACGAATACAAAAAAAAAAACTCATTATATATCAT	5
+Chr4	6020491	33	-	TAATGACTTAGAGAATAAACTACGAATACAAAA	4
+```
+from ler_0.v7c.sdi,\
+And removed 
+```
+Chr5	8499298	-1	CAACAAGTTAAAGATTTAAGGTTTTAAAATCCATTTTATAAATAAATTTTTATTGCAAAACTATATTGGAAATCAGAGAAATTTGAAAAATTCACTTTTAAAGTTTTTTAATAACTGATAACGTACTACTTCAAAAACTGTAAACCAAATGCTAAGAATGCATATATGTTTCTGGCAACAAAGAGATAACAGATA	GAGTGATAAAAAGATAAATAGCCTATCTTTTTGTTGGATATCCAACAAGTTGAAGGTTAAGGTTTTAAAAGATCCCAGTTTATAGCAAAACTTAAGTTAGAAATCAGAGATATATATTTACAAAAATCACTATTCAATTTTTTTTATAATTGATTACTACTTCAAAAACTAGAAACCAAAAGCCAAGAATGTAT	5
+Chr5	8499298	42	-	GAGTGATAAAAAGATAAATAGCCTATCTTTTTGTTGGATATC	4
+```
+from no_0.v7c.sdi, and removed 
+```
+Chr2	7677637	7	ACAAGATAAATATTTAAAAATATATTTCTTAGA	GCTAAAGTAATGAAAAAGTGTTTCTAAAACACTAGTTAAT	5
+Chr2	7677637	8	-	GCTAAAGT	4
+```
+from oy_0.v7c.sdi manually.
+
+```
+gean pseudogeno -r tair10.fa -v bur_0.v7c.sdi -o bur_0.fa
+gean pseudogeno -r tair10.fa -v can_0.v7c.sdi -o can_0.fa
+gean pseudogeno -r tair10.fa -v ct_1.v7c.sdi -o ct_1.fa
+gean pseudogeno -r tair10.fa -v edi_0.v7c.sdi -o edi_0.fa
+gean pseudogeno -r tair10.fa -v hi_0.v7c.sdi -o hi_0.fa
+gean pseudogeno -r tair10.fa -v kn_0.v7c.sdi -o kn_0.fa
+gean pseudogeno -r tair10.fa -v ler_0.v7c.sdi -o ler_0.fa
+gean pseudogeno -r tair10.fa -v mt_0.v7c.sdi -o mt_0.fa
+gean pseudogeno -r tair10.fa -v no_0.v7c.sdi -o no_0.fa
+gean pseudogeno -r tair10.fa -v oy_0.v7c.sdi -o oy_0.fa
+gean pseudogeno -r tair10.fa -v po_0.v7c.sdi -o po_0.fa
+gean pseudogeno -r tair10.fa -v rsch_4.v7c.sdi -o rsch_4.fa
+gean pseudogeno -r tair10.fa -v sf_2.v7c.sdi -o sf_2.fa
+gean pseudogeno -r tair10.fa -v tsu_0.v7c.sdi -o tsu_0.fa
+gean pseudogeno -r tair10.fa -v wil_2.v7c.sdi -o wil_2.fa
+gean pseudogeno -r tair10.fa -v ws_0.v7c.sdi -o ws_0.fa
+gean pseudogeno -r tair10.fa -v wu_0.v7c.sdi -o wu_0.fa
+gean pseudogeno -r tair10.fa -v zu_0.v7c.sdi -o zu_0.fa
+```
+
+
+Check the variants length distribution
+```
+awk '{ print length($4)"\t"length($5) }' bur_0.v7c.sdi >  bur_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' can_0.v7c.sdi >  can_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' ct_1.v7c.sdi >  ct_1.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' edi_0.v7c.sdi >  edi_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' hi_0.v7c.sdi >  hi_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' kn_0.v7c.sdi >  kn_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' ler_0.v7c.sdi >  ler_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' mt_0.v7c.sdi >  mt_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' no_0.v7c.sdi >  no_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' oy_0.v7c.sdi >  oy_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' po_0.v7c.sdi >  po_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' rsch_4.v7c.sdi >  rsch_4.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' sf_2.v7c.sdi >  sf_2.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' tsu_0.v7c.sdi >  tsu_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' wil_2.v7c.sdi >  wil_2.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' ws_0.v7c.sdi >  ws_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' wu_0.v7c.sdi >  wu_0.v7c.sdi.length
+awk '{ print length($4)"\t"length($5) }' zu_0.v7c.sdi >  zu_0.v7c.sdi.length
+samtools faidx tair10.fa
+```
+
+Plot variants length distribution
+```{r warning=FALSE}
+
+faidx = read.table("tair10.fa.fai")
+genome_size = sum(faidx$V2)
+
+
+library(ggplot2)
+library(data.table)
+library(dplyr)
+
+variant_length_distribution <- function(accession) {
+  dat = read.table(accession)
+  print ( paste("Total number of variant sites affected reference genome:", sum(dat$V1), sep="") )
+  print ( paste("Total number of variant sites with length >= 50bp affected reference genome:", sum(dat[which(dat$V1>=50),]$V1), sep="") )
+  
+  print ( paste("Total number of variants affected reference genome:", sum(dat$V1)/genome_size, sep="") )
+  print ( paste("Total length of variants with length >= 50bp affected reference genome:", sum(dat[which(dat$V1>=50),]$V1)/genome_size, sep="") )
+  
+  
+  
+  dat$length = dat$V1
+  dat[which(dat$V1 < dat$V2),]$length = dat[which(dat$V1 < dat$V2),]$V2
+  
+  df<- dat[order(dat$length),] %>% mutate(CUMFREQ=cumsum(length))
+  p = ggplot(data=df, aes(x=length, y=CUMFREQ)) + geom_area( fill = "#00BFC4", position = 'identity')  + labs(x="Variant length", y="Cumulative length", fill="", title="") + xlim(0, 65000) + ylim(0, 5200000)+
+      theme_grey(base_size = 36) + 
+      theme(axis.line = element_blank(), panel.background = element_blank(),panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid") )
+  print(p)
+}
+
+variant_length_distribution("bur_0.v7c.sdi.length")
+variant_length_distribution("can_0.v7c.sdi.length")
+variant_length_distribution("ct_1.v7c.sdi.length")
+variant_length_distribution("edi_0.v7c.sdi.length")
+variant_length_distribution("hi_0.v7c.sdi.length")
+variant_length_distribution("kn_0.v7c.sdi.length")
+variant_length_distribution("ler_0.v7c.sdi.length")
+variant_length_distribution("mt_0.v7c.sdi.length")
+variant_length_distribution("no_0.v7c.sdi.length")
+variant_length_distribution("oy_0.v7c.sdi.length")
+variant_length_distribution("po_0.v7c.sdi.length")
+variant_length_distribution("rsch_4.v7c.sdi.length")
+variant_length_distribution("sf_2.v7c.sdi.length")
+variant_length_distribution("tsu_0.v7c.sdi.length")
+variant_length_distribution("wil_2.v7c.sdi.length")
+variant_length_distribution("ws_0.v7c.sdi.length")
+variant_length_distribution("wu_0.v7c.sdi.length")
+variant_length_distribution("zu_0.v7c.sdi.length")
+```
+
+
+Transform sdi file into maf format
+```
+anchorwave sdiToMaf -o col_bur.maf -r tair10.fa -s bur_0.v7c.sdi -q bur_0.fa
+anchorwave sdiToMaf -o col_can.maf -r tair10.fa -s can_0.v7c.sdi -q can_0.fa
+anchorwave sdiToMaf -o col_ct.maf -r tair10.fa -s ct_1.v7c.sdi -q ct_1.fa
+anchorwave sdiToMaf -o col_edi.maf -r tair10.fa -s edi_0.v7c.sdi -q edi_0.fa
+anchorwave sdiToMaf -o col_hi.maf -r tair10.fa -s hi_0.v7c.sdi -q hi_0.fa
+anchorwave sdiToMaf -o col_kn.maf -r tair10.fa -s kn_0.v7c.sdi -q kn_0.fa
+anchorwave sdiToMaf -o col_ler.maf -r tair10.fa -s ler_0.v7c.sdi -q ler_0.fa
+anchorwave sdiToMaf -o col_mt.maf -r tair10.fa -s mt_0.v7c.sdi -q mt_0.fa
+anchorwave sdiToMaf -o col_no.maf -r tair10.fa -s no_0.v7c.sdi -q no_0.fa
+anchorwave sdiToMaf -o col_oy.maf -r tair10.fa -s oy_0.v7c.sdi -q oy_0.fa
+anchorwave sdiToMaf -o col_po.maf -r tair10.fa -s po_0.v7c.sdi -q po_0.fa
+anchorwave sdiToMaf -o col_rsch.maf -r tair10.fa -s rsch_4.v7c.sdi -q rsch_4.fa
+anchorwave sdiToMaf -o col_sf.maf -r tair10.fa -s sf_2.v7c.sdi -q sf_2.fa
+anchorwave sdiToMaf -o col_tsu.maf -r tair10.fa -s tsu_0.v7c.sdi -q tsu_0.fa
+anchorwave sdiToMaf -o col_wil.maf -r tair10.fa -s wil_2.v7c.sdi -q wil_2.fa
+anchorwave sdiToMaf -o col_ws.maf -r tair10.fa -s ws_0.v7c.sdi -q ws_0.fa
+anchorwave sdiToMaf -o col_wu.maf -r tair10.fa -s wu_0.v7c.sdi -q wu_0.fa
+anchorwave sdiToMaf -o col_zu.maf -r tair10.fa -s zu_0.v7c.sdi -q zu_0.fa
+```
+
+
+Using AnchorWave to extract full-length CDS. \
+NOTE: please do NOT use CDS extracted using other software and do NOT use the output full-length CDS file for other purpose. Since AnchorWave filtered some CDS records to minimum the impact of minimap2 limitation on genome alignment that "Minimap2 often misses small exons" (https://github.com/lh3/minimap2#limitations)
+```
+anchorwave gff2seq -r tair10.fa -i TAIR10_GFF3_genes.gff -o cds.fa
+```
+
+Use minimap2 (https://github.com/lh3/minimap2) to map the extracted sequence to the TAIR10 reference genome sequence and synthesis genomes
+```
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 tair10.fa cds.fa > ref.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 bur_0.fa cds.fa > bur_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 can_0.fa cds.fa > can_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 ct_1.fa cds.fa > ct_1.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 edi_0.fa cds.fa > edi_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 hi_0.fa cds.fa > hi_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 kn_0.fa cds.fa > kn_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 ler_0.fa cds.fa > ler_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 mt_0.fa cds.fa > mt_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 no_0.fa cds.fa > no_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 oy_0.fa cds.fa > oy_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 po_0.fa cds.fa > po_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 rsch_4.fa cds.fa > rsch_4.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 sf_2.fa cds.fa > sf_2.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 tsu_0.fa cds.fa > tsu_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 wil_2.fa cds.fa > wil_2.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 ws_0.fa cds.fa > ws_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 wu_0.fa cds.fa > wu_0.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 zu_0.fa cds.fa > zu_0.sam
+
+```
+
+Perform genome alignment using AnchorWave
+```
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a bur_0.sam -ar ref.sam -s bur_0.fa -v bur_0.vcf -n bur_0.anchors -o bur_0.maf -f bur_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >bur_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a can_0.sam -ar ref.sam -s can_0.fa -v can_0.vcf -n can_0.anchors -o can_0.maf -f can_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >can_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a ct_1.sam -ar ref.sam -s ct_1.fa -v ct_1.vcf -n ct_1.anchors -o ct_1.maf -f ct_1.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >ct_1.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a edi_0.sam -ar ref.sam -s edi_0.fa -v edi_0.vcf -n edi_0.anchors -o edi_0.maf -f edi_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >edi_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a hi_0.sam -ar ref.sam -s hi_0.fa -v hi_0.vcf -n hi_0.anchors -o hi_0.maf -f hi_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >hi_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a kn_0.sam -ar ref.sam -s kn_0.fa -v kn_0.vcf -n kn_0.anchors -o kn_0.maf -f kn_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >kn_0.log 2>&1 &
+
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a ler_0.sam -ar ref.sam -s ler_0.fa -v ler_0.vcf -n ler_0.anchors -o ler_0.maf -f ler_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >ler_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a mt_0.sam -ar ref.sam -s mt_0.fa -v mt_0.vcf -n mt_0.anchors -o mt_0.maf -f mt_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >mt_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a no_0.sam -ar ref.sam -s no_0.fa -v no_0.vcf -n no_0.anchors -o no_0.maf -f no_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >no_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a oy_0.sam -ar ref.sam -s oy_0.fa -v oy_0.vcf -n oy_0.anchors -o oy_0.maf -f oy_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >oy_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a po_0.sam -ar ref.sam -s po_0.fa -v po_0.vcf -n po_0.anchors -o po_0.maf -f po_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >po_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a rsch_4.sam -ar ref.sam -s rsch_4.fa -v rsch_4.vcf -n rsch_4.anchors -o rsch_4.maf -f rsch_4.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >rsch_4.log 2>&1 &
+
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a sf_2.sam -ar ref.sam -s sf_2.fa -v sf_2.vcf -n sf_2.anchors -o sf_2.maf -f sf_2.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >sf_2.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a tsu_0.sam -ar ref.sam -s tsu_0.fa -v tsu_0.vcf -n tsu_0.anchors -o tsu_0.maf -f tsu_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >tsu_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a wil_2.sam -ar ref.sam -s wil_2.fa -v wil_2.vcf -n wil_2.anchors -o wil_2.maf -f wil_2.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >wil_2.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a ws_0.sam -ar ref.sam -s ws_0.fa -v ws_0.vcf -n ws_0.anchors -o ws_0.maf -f ws_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >ws_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a wu_0.sam -ar ref.sam -s wu_0.fa -v wu_0.vcf -n wu_0.anchors -o wu_0.maf -f wu_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >wu_0.log 2>&1 &
+/usr/bin/time anchorwave genoAli -i TAIR10_GFF3_genes.gff -as cds.fa -r tair10.fa -a zu_0.sam -ar ref.sam -s zu_0.fa -v zu_0.vcf -n zu_0.anchors -o zu_0.maf -f zu_0.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >zu_0.log 2>&1 &
+```
+
+Compare produced genome alignment with benchmark genome alignment \
+CompareMafAndCheckMafCoverage.py is a script included in the released code and located at ./src/tests/scripts/CompareMafAndCheckMafCoverage.py 
+```
+sed -i 's/tair10.fa./col./g' bur_0.maf
+sed -i 's/bur_0.fa./query./g' bur_0.maf
+sed -i 's/tair10.fa./col./g' can_0.maf
+sed -i 's/can_0.fa./query./g' can_0.maf
+sed -i 's/tair10.fa./col./g' ct_1.maf
+sed -i 's/ct_1.fa./query./g' ct_1.maf
+sed -i 's/tair10.fa./col./g' edi_0.maf
+sed -i 's/edi_0.fa./query./g' edi_0.maf
+sed -i 's/tair10.fa./col./g' hi_0.maf
+sed -i 's/hi_0.fa./query./g' hi_0.maf
+sed -i 's/tair10.fa./col./g' kn_0.maf
+sed -i 's/kn_0.fa./query./g' kn_0.maf
+sed -i 's/tair10.fa./col./g' ler_0.maf
+sed -i 's/ler_0.fa./query./g' ler_0.maf
+sed -i 's/tair10.fa./col./g' mt_0.maf
+sed -i 's/mt_0.fa./query./g' mt_0.maf
+sed -i 's/tair10.fa./col./g' no_0.maf
+sed -i 's/no_0.fa./query./g' no_0.maf
+sed -i 's/tair10.fa./col./g' oy_0.maf
+sed -i 's/oy_0.fa./query./g' oy_0.maf
+sed -i 's/tair10.fa./col./g' po_0.maf
+sed -i 's/po_0.fa./query./g' po_0.maf
+sed -i 's/tair10.fa./col./g' rsch_4.maf
+sed -i 's/rsch_4.fa./query./g' rsch_4.maf
+sed -i 's/tair10.fa./col./g' sf_2.maf
+sed -i 's/sf_2.fa./query./g' sf_2.maf
+sed -i 's/tair10.fa./col./g' tsu_0.maf
+sed -i 's/tsu_0.fa./query./g' tsu_0.maf
+sed -i 's/tair10.fa./col./g' wil_2.maf
+sed -i 's/wil_2.fa./query./g' wil_2.maf
+sed -i 's/tair10.fa./col./g' ws_0.maf
+sed -i 's/ws_0.fa./query./g' ws_0.maf
+sed -i 's/tair10.fa./col./g' wu_0.maf
+sed -i 's/wu_0.fa./query./g' wu_0.maf
+sed -i 's/tair10.fa./col./g' zu_0.maf
+sed -i 's/zu_0.fa./query./g' zu_0.maf
+
+python3 CompareMafAndCheckMafCoverage.py ./col_bur.maf bur_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_can.maf can_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_ct.maf ct_1.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_edi.maf edi_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_hi.maf hi_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_kn.maf kn_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_ler.maf ler_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_mt.maf mt_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_no.maf no_0.maf &
+
+python3 CompareMafAndCheckMafCoverage.py ./col_oy.maf oy_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_po.maf po_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_rsch.maf rsch_4.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_sf.maf sf_2.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_tsu.maf tsu_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_wil.maf wil_2.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_ws.maf ws_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_wu.maf wu_0.maf &
+python3 CompareMafAndCheckMafCoverage.py ./col_zu.maf zu_0.maf &
+
+
+python3 CompareMafAndCheckMafCoverageAll.py ./col_bur.maf bur_0.maf &
+python3 CompareMafAndCheckMafCoverageAll.py ./col_can.maf can_0.maf &
+python3 CompareMafAndCheckMafCoverageAll.py ./col_ct.maf ct_1.maf &
+
+python3 CompareMafAndCheckMafCoverageAll.py ./col_edi.maf edi_0.maf &
+python3 CompareMafAndCheckMafCoverageAll.py ./col_hi.maf hi_0.maf &
+python3 CompareMafAndCheckMafCoverageAll.py ./col_kn.maf kn_0.maf &
+
+python3 CompareMafAndCheckMafCoverageAll.py ./col_ler.maf ler_0.maf &
+python3 CompareMafAndCheckMafCoverageAll.py ./col_mt.maf mt_0.maf &
+python3 CompareMafAndCheckMafCoverageAll.py ./col_no.maf no_0.maf &
+
+python3 CompareMafAndCheckMafCoverageAll.py ./col_oy.maf oy_0.maf &
+python3 CompareMafAndCheckMafCoverageAll.py ./col_po.maf po_0.maf &
+python3 CompareMafAndCheckMafCoverageAll.py ./col_rsch.maf rsch_4.maf &
+
+python3 CompareMafAndCheckMafCoverageAll.py ./col_sf.maf sf_2.maf &
+python3 CompareMafAndCheckMafCoverageAll.py ./col_tsu.maf tsu_0.maf &
+
+python3 CompareMafAndCheckMafCoverageAll.py ./col_wil.maf wil_2.maf &
+python3 CompareMafAndCheckMafCoverageAll.py ./col_ws.maf ws_0.maf &
+
+python3 CompareMafAndCheckMafCoverageAll.py ./col_wu.maf wu_0.maf &
+python3 CompareMafAndCheckMafCoverageAll.py ./col_zu.maf zu_0.maf &
+
+
+
+
+
+
+```
+
+
+Perform genome alignment using minimap2
+```
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa bur_0.fa > minimap2_asm5_bur_0.sam 2> minimap2_asm5_bur_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa can_0.fa > minimap2_asm5_can_0.sam 2> minimap2_asm5_can_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa ct_1.fa > minimap2_asm5_ct_1.sam 2> minimap2_asm5_ct_1.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa edi_0.fa > minimap2_asm5_edi_0.sam 2> minimap2_asm5_edi_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa hi_0.fa > minimap2_asm5_hi_0.sam 2> minimap2_asm5_hi_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa kn_0.fa > minimap2_asm5_kn_0.sam 2> minimap2_asm5_kn_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa ler_0.fa > minimap2_asm5_ler_0.sam 2> minimap2_asm5_ler_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa mt_0.fa > minimap2_asm5_mt_0.sam 2> minimap2_asm5_mt_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa no_0.fa > minimap2_asm5_no_0.sam 2> minimap2_asm5_no_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa oy_0.fa > minimap2_asm5_oy_0.sam 2> minimap2_asm5_oy_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa po_0.fa > minimap2_asm5_po_0.sam 2> minimap2_asm5_po_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa rsch_4.fa > minimap2_asm5_rsch_4.sam 2> minimap2_asm5_rsch_4.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa sf_2.fa > minimap2_asm5_sf_2.sam 2> minimap2_asm5_sf_2.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa tsu_0.fa > minimap2_asm5_tsu_0.sam 2> minimap2_asm5_tsu_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa wil_2.fa > minimap2_asm5_wil_2.sam 2> minimap2_asm5_wil_2.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa ws_0.fa > minimap2_asm5_ws_0.sam 2> minimap2_asm5_ws_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa wu_0.fa > minimap2_asm5_wu_0.sam 2> minimap2_asm5_wu_0.log &
+/usr/bin/time minimap2 -x asm5 -t 1 -a tair10.fa zu_0.fa > minimap2_asm5_zu_0.sam 2> minimap2_asm5_zu_0.log &
+
+
+
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa bur_0.fa > minimap2_asm10_bur_0.sam 2> minimap2_asm10_bur_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa can_0.fa > minimap2_asm10_can_0.sam 2> minimap2_asm10_can_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa ct_1.fa > minimap2_asm10_ct_1.sam 2> minimap2_asm10_ct_1.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa edi_0.fa > minimap2_asm10_edi_0.sam 2> minimap2_asm10_edi_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa hi_0.fa > minimap2_asm10_hi_0.sam 2> minimap2_asm10_hi_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa kn_0.fa > minimap2_asm10_kn_0.sam 2> minimap2_asm10_kn_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa ler_0.fa > minimap2_asm10_ler_0.sam 2> minimap2_asm10_ler_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa mt_0.fa > minimap2_asm10_mt_0.sam 2> minimap2_asm10_mt_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa no_0.fa > minimap2_asm10_no_0.sam 2> minimap2_asm10_no_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa oy_0.fa > minimap2_asm10_oy_0.sam 2> minimap2_asm10_oy_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa po_0.fa > minimap2_asm10_po_0.sam 2> minimap2_asm10_po_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa rsch_4.fa > minimap2_asm10_rsch_4.sam 2> minimap2_asm10_rsch_4.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa sf_2.fa > minimap2_asm10_sf_2.sam 2> minimap2_asm10_sf_2.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa tsu_0.fa > minimap2_asm10_tsu_0.sam 2> minimap2_asm10_tsu_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa wil_2.fa > minimap2_asm10_wil_2.sam 2> minimap2_asm10_wil_2.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa ws_0.fa > minimap2_asm10_ws_0.sam 2> minimap2_asm10_ws_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa wu_0.fa > minimap2_asm10_wu_0.sam 2> minimap2_asm10_wu_0.log &
+/usr/bin/time minimap2 -x asm10 -t 1 -a tair10.fa zu_0.fa > minimap2_asm10_zu_0.sam 2> minimap2_asm10_zu_0.log &
+
+
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa bur_0.fa > minimap2_asm20_bur_0.sam 2> minimap2_asm20_bur_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa can_0.fa > minimap2_asm20_can_0.sam 2> minimap2_asm20_can_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa ct_1.fa > minimap2_asm20_ct_1.sam 2> minimap2_asm20_ct_1.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa edi_0.fa > minimap2_asm20_edi_0.sam 2> minimap2_asm20_edi_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa hi_0.fa > minimap2_asm20_hi_0.sam 2> minimap2_asm20_hi_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa kn_0.fa > minimap2_asm20_kn_0.sam 2> minimap2_asm20_kn_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa ler_0.fa > minimap2_asm20_ler_0.sam 2> minimap2_asm20_ler_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa mt_0.fa > minimap2_asm20_mt_0.sam 2> minimap2_asm20_mt_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa no_0.fa > minimap2_asm20_no_0.sam 2> minimap2_asm20_no_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa oy_0.fa > minimap2_asm20_oy_0.sam 2> minimap2_asm20_oy_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa po_0.fa > minimap2_asm20_po_0.sam 2> minimap2_asm20_po_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa rsch_4.fa > minimap2_asm20_rsch_4.sam 2> minimap2_asm20_rsch_4.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa sf_2.fa > minimap2_asm20_sf_2.sam 2> minimap2_asm20_sf_2.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa tsu_0.fa > minimap2_asm20_tsu_0.sam 2> minimap2_asm20_tsu_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa wil_2.fa > minimap2_asm20_wil_2.sam 2> minimap2_asm20_wil_2.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa ws_0.fa > minimap2_asm20_ws_0.sam 2> minimap2_asm20_ws_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa wu_0.fa > minimap2_asm20_wu_0.sam 2> minimap2_asm20_wu_0.log &
+/usr/bin/time minimap2 -x asm20 -t 1 -a tair10.fa zu_0.fa > minimap2_asm20_zu_0.sam 2> minimap2_asm20_zu_0.log &
+
+
+```
+
+Reformat sam files into maf format
+```
+anchorwave sam2maf -r tair10.fa -q bur_0.fa -s minimap2_asm5_bur_0.sam -o minimap2_asm5_bur_0.maf
+anchorwave sam2maf -r tair10.fa -q can_0.fa -s minimap2_asm5_can_0.sam -o minimap2_asm5_can_0.maf
+anchorwave sam2maf -r tair10.fa -q ct_1.fa -s minimap2_asm5_ct_1.sam -o minimap2_asm5_ct_1.maf
+anchorwave sam2maf -r tair10.fa -q edi_0.fa -s minimap2_asm5_edi_0.sam -o minimap2_asm5_edi_0.maf
+anchorwave sam2maf -r tair10.fa -q hi_0.fa -s minimap2_asm5_hi_0.sam -o minimap2_asm5_hi_0.maf
+anchorwave sam2maf -r tair10.fa -q kn_0.fa -s minimap2_asm5_kn_0.sam -o minimap2_asm5_kn_0.maf
+anchorwave sam2maf -r tair10.fa -q ler_0.fa -s minimap2_asm5_ler_0.sam -o minimap2_asm5_ler_0.maf
+anchorwave sam2maf -r tair10.fa -q mt_0.fa -s minimap2_asm5_mt_0.sam -o minimap2_asm5_mt_0.maf
+anchorwave sam2maf -r tair10.fa -q no_0.fa -s minimap2_asm5_no_0.sam -o minimap2_asm5_no_0.maf
+anchorwave sam2maf -r tair10.fa -q oy_0.fa -s minimap2_asm5_oy_0.sam -o minimap2_asm5_oy_0.maf
+anchorwave sam2maf -r tair10.fa -q po_0.fa -s minimap2_asm5_po_0.sam -o minimap2_asm5_po_0.maf
+anchorwave sam2maf -r tair10.fa -q rsch_4.fa -s minimap2_asm5_rsch_4.sam -o minimap2_asm5_rsch_4.maf
+anchorwave sam2maf -r tair10.fa -q sf_2.fa -s minimap2_asm5_sf_2.sam -o minimap2_asm5_sf_2.maf
+anchorwave sam2maf -r tair10.fa -q tsu_0.fa -s minimap2_asm5_tsu_0.sam -o minimap2_asm5_tsu_0.maf
+anchorwave sam2maf -r tair10.fa -q wil_2.fa -s minimap2_asm5_wil_2.sam -o minimap2_asm5_wil_2.maf
+anchorwave sam2maf -r tair10.fa -q ws_0.fa -s minimap2_asm5_ws_0.sam -o minimap2_asm5_ws_0.maf
+anchorwave sam2maf -r tair10.fa -q wu_0.fa -s minimap2_asm5_wu_0.sam -o minimap2_asm5_wu_0.maf
+anchorwave sam2maf -r tair10.fa -q zu_0.fa -s minimap2_asm5_zu_0.sam -o minimap2_asm5_zu_0.maf
+
+
+anchorwave sam2maf -r tair10.fa -q bur_0.fa -s minimap2_asm10_bur_0.sam -o minimap2_asm10_bur_0.maf
+anchorwave sam2maf -r tair10.fa -q can_0.fa -s minimap2_asm10_can_0.sam -o minimap2_asm10_can_0.maf
+anchorwave sam2maf -r tair10.fa -q ct_1.fa -s minimap2_asm10_ct_1.sam -o minimap2_asm10_ct_1.maf
+anchorwave sam2maf -r tair10.fa -q edi_0.fa -s minimap2_asm10_edi_0.sam -o minimap2_asm10_edi_0.maf
+anchorwave sam2maf -r tair10.fa -q hi_0.fa -s minimap2_asm10_hi_0.sam -o minimap2_asm10_hi_0.maf
+anchorwave sam2maf -r tair10.fa -q kn_0.fa -s minimap2_asm10_kn_0.sam -o minimap2_asm10_kn_0.maf
+anchorwave sam2maf -r tair10.fa -q ler_0.fa -s minimap2_asm10_ler_0.sam -o minimap2_asm10_ler_0.maf
+anchorwave sam2maf -r tair10.fa -q mt_0.fa -s minimap2_asm10_mt_0.sam -o minimap2_asm10_mt_0.maf
+anchorwave sam2maf -r tair10.fa -q no_0.fa -s minimap2_asm10_no_0.sam -o minimap2_asm10_no_0.maf
+anchorwave sam2maf -r tair10.fa -q oy_0.fa -s minimap2_asm10_oy_0.sam -o minimap2_asm10_oy_0.maf
+anchorwave sam2maf -r tair10.fa -q po_0.fa -s minimap2_asm10_po_0.sam -o minimap2_asm10_po_0.maf
+anchorwave sam2maf -r tair10.fa -q rsch_4.fa -s minimap2_asm10_rsch_4.sam -o minimap2_asm10_rsch_4.maf
+anchorwave sam2maf -r tair10.fa -q sf_2.fa -s minimap2_asm10_sf_2.sam -o minimap2_asm10_sf_2.maf
+anchorwave sam2maf -r tair10.fa -q tsu_0.fa -s minimap2_asm10_tsu_0.sam -o minimap2_asm10_tsu_0.maf
+anchorwave sam2maf -r tair10.fa -q wil_2.fa -s minimap2_asm10_wil_2.sam -o minimap2_asm10_wil_2.maf
+anchorwave sam2maf -r tair10.fa -q ws_0.fa -s minimap2_asm10_ws_0.sam -o minimap2_asm10_ws_0.maf
+anchorwave sam2maf -r tair10.fa -q wu_0.fa -s minimap2_asm10_wu_0.sam -o minimap2_asm10_wu_0.maf
+anchorwave sam2maf -r tair10.fa -q zu_0.fa -s minimap2_asm10_zu_0.sam -o minimap2_asm10_zu_0.maf
+
+
+
+anchorwave sam2maf -r tair10.fa -q bur_0.fa -s minimap2_asm20_bur_0.sam -o minimap2_asm20_bur_0.maf
+anchorwave sam2maf -r tair10.fa -q can_0.fa -s minimap2_asm20_can_0.sam -o minimap2_asm20_can_0.maf
+anchorwave sam2maf -r tair10.fa -q ct_1.fa -s minimap2_asm20_ct_1.sam -o minimap2_asm20_ct_1.maf
+anchorwave sam2maf -r tair10.fa -q edi_0.fa -s minimap2_asm20_edi_0.sam -o minimap2_asm20_edi_0.maf
+anchorwave sam2maf -r tair10.fa -q hi_0.fa -s minimap2_asm20_hi_0.sam -o minimap2_asm20_hi_0.maf
+anchorwave sam2maf -r tair10.fa -q kn_0.fa -s minimap2_asm20_kn_0.sam -o minimap2_asm20_kn_0.maf
+anchorwave sam2maf -r tair10.fa -q ler_0.fa -s minimap2_asm20_ler_0.sam -o minimap2_asm20_ler_0.maf
+anchorwave sam2maf -r tair10.fa -q mt_0.fa -s minimap2_asm20_mt_0.sam -o minimap2_asm20_mt_0.maf
+anchorwave sam2maf -r tair10.fa -q no_0.fa -s minimap2_asm20_no_0.sam -o minimap2_asm20_no_0.maf
+anchorwave sam2maf -r tair10.fa -q oy_0.fa -s minimap2_asm20_oy_0.sam -o minimap2_asm20_oy_0.maf
+anchorwave sam2maf -r tair10.fa -q po_0.fa -s minimap2_asm20_po_0.sam -o minimap2_asm20_po_0.maf
+anchorwave sam2maf -r tair10.fa -q rsch_4.fa -s minimap2_asm20_rsch_4.sam -o minimap2_asm20_rsch_4.maf
+anchorwave sam2maf -r tair10.fa -q sf_2.fa -s minimap2_asm20_sf_2.sam -o minimap2_asm20_sf_2.maf
+anchorwave sam2maf -r tair10.fa -q tsu_0.fa -s minimap2_asm20_tsu_0.sam -o minimap2_asm20_tsu_0.maf
+anchorwave sam2maf -r tair10.fa -q wil_2.fa -s minimap2_asm20_wil_2.sam -o minimap2_asm20_wil_2.maf
+anchorwave sam2maf -r tair10.fa -q ws_0.fa -s minimap2_asm20_ws_0.sam -o minimap2_asm20_ws_0.maf
+anchorwave sam2maf -r tair10.fa -q wu_0.fa -s minimap2_asm20_wu_0.sam -o minimap2_asm20_wu_0.maf
+anchorwave sam2maf -r tair10.fa -q zu_0.fa -s minimap2_asm20_zu_0.sam -o minimap2_asm20_zu_0.maf
+
+```
+
+Evaluated the performance of minimap2
+```
+
+python3 CompareMafAndCheckMafCoverage.py col_bur.maf minimap2_asm5_bur_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_can.maf minimap2_asm5_can_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_ct.maf minimap2_asm5_ct_1.maf
+python3 CompareMafAndCheckMafCoverage.py col_edi.maf minimap2_asm5_edi_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_hi.maf minimap2_asm5_hi_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_kn.maf minimap2_asm5_kn_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_ler.maf minimap2_asm5_ler_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_mt.maf minimap2_asm5_mt_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_no.maf minimap2_asm5_no_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_oy.maf minimap2_asm5_oy_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_po.maf minimap2_asm5_po_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_rsch.maf minimap2_asm5_rsch_4.maf
+python3 CompareMafAndCheckMafCoverage.py col_sf.maf minimap2_asm5_sf_2.maf
+python3 CompareMafAndCheckMafCoverage.py col_tsu.maf minimap2_asm5_tsu_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_wil.maf minimap2_asm5_wil_2.maf
+python3 CompareMafAndCheckMafCoverage.py col_ws.maf minimap2_asm5_ws_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_wu.maf minimap2_asm5_wu_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_zu.maf minimap2_asm5_zu_0.maf
+
+python3 CompareMafAndCheckMafCoverage.py col_bur.maf minimap2_asm10_bur_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_can.maf minimap2_asm10_can_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_ct.maf minimap2_asm10_ct_1.maf
+python3 CompareMafAndCheckMafCoverage.py col_edi.maf minimap2_asm10_edi_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_hi.maf minimap2_asm10_hi_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_kn.maf minimap2_asm10_kn_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_ler.maf minimap2_asm10_ler_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_mt.maf minimap2_asm10_mt_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_no.maf minimap2_asm10_no_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_oy.maf minimap2_asm10_oy_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_po.maf minimap2_asm10_po_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_rsch.maf minimap2_asm10_rsch_4.maf
+python3 CompareMafAndCheckMafCoverage.py col_sf.maf minimap2_asm10_sf_2.maf
+python3 CompareMafAndCheckMafCoverage.py col_tsu.maf minimap2_asm10_tsu_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_wil.maf minimap2_asm10_wil_2.maf
+python3 CompareMafAndCheckMafCoverage.py col_ws.maf minimap2_asm10_ws_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_wu.maf minimap2_asm10_wu_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_zu.maf minimap2_asm10_zu_0.maf
+
+
+python3 CompareMafAndCheckMafCoverage.py col_bur.maf minimap2_asm20_bur_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_can.maf minimap2_asm20_can_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_ct.maf minimap2_asm20_ct_1.maf
+python3 CompareMafAndCheckMafCoverage.py col_edi.maf minimap2_asm20_edi_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_hi.maf minimap2_asm20_hi_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_kn.maf minimap2_asm20_kn_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_ler.maf minimap2_asm20_ler_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_mt.maf minimap2_asm20_mt_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_no.maf minimap2_asm20_no_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_oy.maf minimap2_asm20_oy_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_po.maf minimap2_asm20_po_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_rsch.maf minimap2_asm20_rsch_4.maf
+python3 CompareMafAndCheckMafCoverage.py col_sf.maf minimap2_asm20_sf_2.maf
+python3 CompareMafAndCheckMafCoverage.py col_tsu.maf minimap2_asm20_tsu_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_wil.maf minimap2_asm20_wil_2.maf
+python3 CompareMafAndCheckMafCoverage.py col_ws.maf minimap2_asm20_ws_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_wu.maf minimap2_asm20_wu_0.maf
+python3 CompareMafAndCheckMafCoverage.py col_zu.maf minimap2_asm20_zu_0.maf
+
+
+
+python3 CompareMafAndCheckMafCoverageAll.py col_bur.maf minimap2_asm5_bur_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_can.maf minimap2_asm5_can_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ct.maf minimap2_asm5_ct_1.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_edi.maf minimap2_asm5_edi_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_hi.maf minimap2_asm5_hi_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_kn.maf minimap2_asm5_kn_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ler.maf minimap2_asm5_ler_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_mt.maf minimap2_asm5_mt_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_no.maf minimap2_asm5_no_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_oy.maf minimap2_asm5_oy_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_po.maf minimap2_asm5_po_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_rsch.maf minimap2_asm5_rsch_4.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_sf.maf minimap2_asm5_sf_2.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_tsu.maf minimap2_asm5_tsu_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wil.maf minimap2_asm5_wil_2.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ws.maf minimap2_asm5_ws_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wu.maf minimap2_asm5_wu_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_zu.maf minimap2_asm5_zu_0.maf
+
+python3 CompareMafAndCheckMafCoverageAll.py col_bur.maf minimap2_asm10_bur_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_can.maf minimap2_asm10_can_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ct.maf minimap2_asm10_ct_1.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_edi.maf minimap2_asm10_edi_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_hi.maf minimap2_asm10_hi_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_kn.maf minimap2_asm10_kn_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ler.maf minimap2_asm10_ler_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_mt.maf minimap2_asm10_mt_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_no.maf minimap2_asm10_no_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_oy.maf minimap2_asm10_oy_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_po.maf minimap2_asm10_po_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_rsch.maf minimap2_asm10_rsch_4.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_sf.maf minimap2_asm10_sf_2.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_tsu.maf minimap2_asm10_tsu_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wil.maf minimap2_asm10_wil_2.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ws.maf minimap2_asm10_ws_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wu.maf minimap2_asm10_wu_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_zu.maf minimap2_asm10_zu_0.maf
+
+python3 CompareMafAndCheckMafCoverageAll.py col_bur.maf minimap2_asm20_bur_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_can.maf minimap2_asm20_can_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ct.maf minimap2_asm20_ct_1.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_edi.maf minimap2_asm20_edi_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_hi.maf minimap2_asm20_hi_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_kn.maf minimap2_asm20_kn_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ler.maf minimap2_asm20_ler_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_mt.maf minimap2_asm20_mt_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_no.maf minimap2_asm20_no_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_oy.maf minimap2_asm20_oy_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_po.maf minimap2_asm20_po_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_rsch.maf minimap2_asm20_rsch_4.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_sf.maf minimap2_asm20_sf_2.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_tsu.maf minimap2_asm20_tsu_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wil.maf minimap2_asm20_wil_2.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ws.maf minimap2_asm20_ws_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wu.maf minimap2_asm20_wu_0.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_zu.maf minimap2_asm20_zu_0.maf
+
+
+```
+
+
+
+Perform genome alignment using the LAST pipeline
+```
+# The header of MAF file do not compatible between the LAST pipeline and the chain pipeline. 
+# We implemented lastToMafComparsion.pl and lastFinalToSplit.pl to reformat the header of MAF files to make them compatible with the used software.
+
+
+
+lastdb col tair10.fa
+faToTwoBit tair10.fa col.2bit
+faSize -detailed tair10.fa > col.size
+
+
+lastal col bur_0.fa > bur_0_lastal.maf
+faSize -detailed bur_0.fa > bur_0.size
+faToTwoBit bur_0.fa bur_0.2bit
+maf-convert psl bur_0_lastal.maf > bur_0_lastal.psl
+axtChain -linearGap=loose -psl bur_0_lastal.psl -faQ -faT tair10.fa bur_0.fa bur_0_lastal.chain
+chainMergeSort bur_0_lastal.chain > bur_0_lastal.all.chain
+chainPreNet bur_0_lastal.all.chain col.size bur_0.size bur_0_lastal.preNet
+chainNet bur_0_lastal.preNet col.size bur_0.size bur_0_lastal.refTarget.net bur_0_lastal.chainNet
+netToAxt bur_0_lastal.refTarget.net bur_0_lastal.preNet col.2bit bur_0.2bit stdout | axtSort stdin bur_0_lastal.axt
+axtToMaf bur_0_lastal.axt col.size bur_0.size bur_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl bur_0_lastal_final.maf > bur_0_lastal_final_forsplit.maf
+cat bur_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > bur_0_lastal_split.maf
+cat bur_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > bur_0_lastal_final_split.maf
+perl lastToMafComparsion.pl bur_0_lastal_split.maf > bur_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl bur_0_lastal_final_split.maf > bur_0_lastal_final_split_Comparator.maf
+
+
+
+
+
+lastal col can_0.fa > can_0_lastal.maf
+faSize -detailed can_0.fa > can_0.size
+faToTwoBit can_0.fa can_0.2bit
+maf-convert psl can_0_lastal.maf > can_0_lastal.psl
+axtChain -linearGap=loose -psl can_0_lastal.psl -faQ -faT tair10.fa can_0.fa can_0_lastal.chain
+chainMergeSort can_0_lastal.chain > can_0_lastal.all.chain
+chainPreNet can_0_lastal.all.chain col.size can_0.size can_0_lastal.preNet
+chainNet can_0_lastal.preNet col.size can_0.size can_0_lastal.refTarget.net can_0_lastal.chainNet
+netToAxt can_0_lastal.refTarget.net can_0_lastal.preNet col.2bit can_0.2bit stdout | axtSort stdin can_0_lastal.axt
+axtToMaf can_0_lastal.axt col.size can_0.size can_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl can_0_lastal_final.maf > can_0_lastal_final_forsplit.maf
+cat can_0_lastal.maf | last-split | maf-swap | last-split | maf-swap >  can_0_lastal_split.maf
+cat can_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap >  can_0_lastal_final_split.maf
+perl lastToMafComparsion.pl can_0_lastal_split.maf > can_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl can_0_lastal_final_split.maf > can_0_lastal_final_split_Comparator.maf
+
+
+
+
+
+lastal col ct_1.fa > ct_1_lastal.maf
+faSize -detailed ct_1.fa > ct_1.size
+faToTwoBit ct_1.fa ct_1.2bit
+maf-convert psl ct_1_lastal.maf > ct_1_lastal.psl
+axtChain -linearGap=loose -psl ct_1_lastal.psl -faQ -faT tair10.fa ct_1.fa ct_1_lastal.chain
+chainMergeSort ct_1_lastal.chain > ct_1_lastal.all.chain
+chainPreNet ct_1_lastal.all.chain col.size ct_1.size ct_1_lastal.preNet
+chainNet ct_1_lastal.preNet col.size ct_1.size ct_1_lastal.refTarget.net ct_1_lastal.chainNet
+netToAxt ct_1_lastal.refTarget.net ct_1_lastal.preNet col.2bit ct_1.2bit stdout | axtSort stdin ct_1_lastal.axt
+axtToMaf ct_1_lastal.axt col.size ct_1.size ct_1_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl ct_1_lastal_final.maf > ct_1_lastal_final_forsplit.maf
+cat ct_1_lastal.maf | last-split | maf-swap | last-split | maf-swap >  ct_1_lastal_split.maf
+cat ct_1_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap >  ct_1_lastal_final_split.maf
+perl lastToMafComparsion.pl ct_1_lastal_split.maf > ct_1_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl ct_1_lastal_final_split.maf > ct_1_lastal_final_split_Comparator.maf
+
+
+
+
+
+
+lastal col edi_0.fa > edi_0_lastal.maf
+faSize -detailed edi_0.fa > edi_0.size
+faToTwoBit edi_0.fa edi_0.2bit
+maf-convert psl edi_0_lastal.maf > edi_0_lastal.psl
+axtChain -linearGap=loose -psl edi_0_lastal.psl -faQ -faT tair10.fa edi_0.fa edi_0_lastal.chain
+chainMergeSort edi_0_lastal.chain > edi_0_lastal.all.chain
+chainPreNet edi_0_lastal.all.chain col.size edi_0.size edi_0_lastal.preNet
+chainNet edi_0_lastal.preNet col.size edi_0.size edi_0_lastal.refTarget.net edi_0_lastal.chainNet
+netToAxt edi_0_lastal.refTarget.net edi_0_lastal.preNet col.2bit edi_0.2bit stdout | axtSort stdin edi_0_lastal.axt
+axtToMaf edi_0_lastal.axt col.size edi_0.size edi_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl edi_0_lastal_final.maf > edi_0_lastal_final_forsplit.maf
+cat edi_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > edi_0_lastal_split.maf
+cat edi_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > edi_0_lastal_final_split.maf
+perl lastToMafComparsion.pl edi_0_lastal_split.maf > edi_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl edi_0_lastal_final_split.maf > edi_0_lastal_final_split_Comparator.maf
+
+
+
+
+
+
+lastal col hi_0.fa > hi_0_lastal.maf
+faSize -detailed hi_0.fa > hi_0.size
+faToTwoBit hi_0.fa hi_0.2bit
+maf-convert psl hi_0_lastal.maf > hi_0_lastal.psl
+axtChain -linearGap=loose -psl hi_0_lastal.psl -faQ -faT tair10.fa hi_0.fa hi_0_lastal.chain
+chainMergeSort hi_0_lastal.chain > hi_0_lastal.all.chain
+chainPreNet hi_0_lastal.all.chain col.size hi_0.size hi_0_lastal.preNet
+chainNet hi_0_lastal.preNet col.size hi_0.size hi_0_lastal.refTarget.net hi_0_lastal.chainNet
+netToAxt hi_0_lastal.refTarget.net hi_0_lastal.preNet col.2bit hi_0.2bit stdout | axtSort stdin hi_0_lastal.axt
+axtToMaf hi_0_lastal.axt col.size hi_0.size hi_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl hi_0_lastal_final.maf > hi_0_lastal_final_forsplit.maf
+cat hi_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > hi_0_lastal_split.maf
+cat hi_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > hi_0_lastal_final_split.maf
+perl lastToMafComparsion.pl hi_0_lastal_split.maf > hi_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl hi_0_lastal_final_split.maf > hi_0_lastal_final_split_Comparator.maf
+
+
+
+
+lastal col kn_0.fa > kn_0_lastal.maf
+faSize -detailed kn_0.fa > kn_0.size
+faToTwoBit kn_0.fa kn_0.2bit
+maf-convert psl kn_0_lastal.maf > kn_0_lastal.psl
+axtChain -linearGap=loose -psl kn_0_lastal.psl -faQ -faT tair10.fa kn_0.fa kn_0_lastal.chain
+chainMergeSort kn_0_lastal.chain > kn_0_lastal.all.chain
+chainPreNet kn_0_lastal.all.chain col.size kn_0.size kn_0_lastal.preNet
+chainNet kn_0_lastal.preNet col.size kn_0.size kn_0_lastal.refTarget.net kn_0_lastal.chainNet
+netToAxt kn_0_lastal.refTarget.net kn_0_lastal.preNet col.2bit kn_0.2bit stdout | axtSort stdin kn_0_lastal.axt
+axtToMaf kn_0_lastal.axt col.size kn_0.size kn_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl kn_0_lastal_final.maf > kn_0_lastal_final_forsplit.maf
+cat kn_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > kn_0_lastal_split.maf
+cat kn_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > kn_0_lastal_final_split.maf
+perl lastToMafComparsion.pl kn_0_lastal_split.maf > kn_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl kn_0_lastal_final_split.maf > kn_0_lastal_final_split_Comparator.maf
+
+
+
+lastal col ler_0.fa > ler_0_lastal.maf
+faSize -detailed ler_0.fa > ler_0.size
+faToTwoBit ler_0.fa ler_0.2bit
+maf-convert psl ler_0_lastal.maf > ler_0_lastal.psl
+axtChain -linearGap=loose -psl ler_0_lastal.psl -faQ -faT tair10.fa ler_0.fa ler_0_lastal.chain
+chainMergeSort ler_0_lastal.chain > ler_0_lastal.all.chain
+chainPreNet ler_0_lastal.all.chain col.size ler_0.size ler_0_lastal.preNet
+chainNet ler_0_lastal.preNet col.size ler_0.size ler_0_lastal.refTarget.net ler_0_lastal.chainNet
+netToAxt ler_0_lastal.refTarget.net ler_0_lastal.preNet col.2bit ler_0.2bit stdout | axtSort stdin ler_0_lastal.axt
+axtToMaf ler_0_lastal.axt col.size ler_0.size ler_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl ler_0_lastal_final.maf > ler_0_lastal_final_forsplit.maf
+cat ler_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > ler_0_lastal_split.maf
+cat ler_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > ler_0_lastal_final_split.maf
+perl lastToMafComparsion.pl ler_0_lastal_split.maf > ler_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl ler_0_lastal_final_split.maf > ler_0_lastal_final_split_Comparator.maf
+
+
+
+
+
+lastal col mt_0.fa > mt_0_lastal.maf
+faSize -detailed mt_0.fa > mt_0.size
+faToTwoBit mt_0.fa mt_0.2bit
+maf-convert psl mt_0_lastal.maf > mt_0_lastal.psl
+axtChain -linearGap=loose -psl mt_0_lastal.psl -faQ -faT tair10.fa mt_0.fa mt_0_lastal.chain
+chainMergeSort mt_0_lastal.chain > mt_0_lastal.all.chain
+chainPreNet mt_0_lastal.all.chain col.size mt_0.size mt_0_lastal.preNet
+chainNet mt_0_lastal.preNet col.size mt_0.size mt_0_lastal.refTarget.net mt_0_lastal.chainNet
+netToAxt mt_0_lastal.refTarget.net mt_0_lastal.preNet col.2bit mt_0.2bit stdout | axtSort stdin mt_0_lastal.axt
+axtToMaf mt_0_lastal.axt col.size mt_0.size mt_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl mt_0_lastal_final.maf > mt_0_lastal_final_forsplit.maf
+cat mt_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > mt_0_lastal_split.maf
+cat mt_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > mt_0_lastal_final_split.maf
+perl lastToMafComparsion.pl mt_0_lastal_split.maf > mt_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl mt_0_lastal_final_split.maf > mt_0_lastal_final_split_Comparator.maf
+
+
+
+lastal col no_0.fa > no_0_lastal.maf
+faSize -detailed no_0.fa > no_0.size
+faToTwoBit no_0.fa no_0.2bit
+maf-convert psl no_0_lastal.maf > no_0_lastal.psl
+axtChain -linearGap=loose -psl no_0_lastal.psl -faQ -faT tair10.fa no_0.fa no_0_lastal.chain
+chainMergeSort no_0_lastal.chain > no_0_lastal.all.chain
+chainPreNet no_0_lastal.all.chain col.size no_0.size no_0_lastal.preNet
+chainNet no_0_lastal.preNet col.size no_0.size no_0_lastal.refTarget.net no_0_lastal.chainNet
+netToAxt no_0_lastal.refTarget.net no_0_lastal.preNet col.2bit no_0.2bit stdout | axtSort stdin no_0_lastal.axt
+axtToMaf no_0_lastal.axt col.size no_0.size no_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl no_0_lastal_final.maf > no_0_lastal_final_forsplit.maf
+cat no_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > no_0_lastal_split.maf
+cat no_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > no_0_lastal_final_split.maf
+perl lastToMafComparsion.pl no_0_lastal_split.maf > no_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl no_0_lastal_final_split.maf > no_0_lastal_final_split_Comparator.maf
+
+
+
+lastal col oy_0.fa > oy_0_lastal.maf
+faSize -detailed oy_0.fa > oy_0.size
+faToTwoBit oy_0.fa oy_0.2bit
+maf-convert psl oy_0_lastal.maf > oy_0_lastal.psl
+axtChain -linearGap=loose -psl oy_0_lastal.psl -faQ -faT tair10.fa oy_0.fa oy_0_lastal.chain
+chainMergeSort oy_0_lastal.chain > oy_0_lastal.all.chain
+chainPreNet oy_0_lastal.all.chain col.size oy_0.size oy_0_lastal.preNet
+chainNet oy_0_lastal.preNet col.size oy_0.size oy_0_lastal.refTarget.net oy_0_lastal.chainNet
+netToAxt oy_0_lastal.refTarget.net oy_0_lastal.preNet col.2bit oy_0.2bit stdout | axtSort stdin oy_0_lastal.axt
+axtToMaf oy_0_lastal.axt col.size oy_0.size oy_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl oy_0_lastal_final.maf > oy_0_lastal_final_forsplit.maf
+cat oy_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > oy_0_lastal_split.maf
+cat oy_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > oy_0_lastal_final_split.maf
+perl lastToMafComparsion.pl oy_0_lastal_split.maf > oy_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl oy_0_lastal_final_split.maf > oy_0_lastal_final_split_Comparator.maf
+
+
+
+lastal col po_0.fa > po_0_lastal.maf
+faSize -detailed po_0.fa > po_0.size
+faToTwoBit po_0.fa po_0.2bit
+maf-convert psl po_0_lastal.maf > po_0_lastal.psl
+axtChain -linearGap=loose -psl po_0_lastal.psl -faQ -faT tair10.fa po_0.fa po_0_lastal.chain
+chainMergeSort po_0_lastal.chain > po_0_lastal.all.chain
+chainPreNet po_0_lastal.all.chain col.size po_0.size po_0_lastal.preNet
+chainNet po_0_lastal.preNet col.size po_0.size po_0_lastal.refTarget.net po_0_lastal.chainNet
+netToAxt po_0_lastal.refTarget.net po_0_lastal.preNet col.2bit po_0.2bit stdout | axtSort stdin po_0_lastal.axt
+axtToMaf po_0_lastal.axt col.size po_0.size po_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl po_0_lastal_final.maf > po_0_lastal_final_forsplit.maf
+cat po_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > po_0_lastal_split.maf
+cat po_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > po_0_lastal_final_split.maf
+perl lastToMafComparsion.pl po_0_lastal_split.maf > po_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl po_0_lastal_final_split.maf > po_0_lastal_final_split_Comparator.maf
+
+
+lastal col rsch_4.fa > rsch_4_lastal.maf
+faSize -detailed rsch_4.fa > rsch_4.size
+faToTwoBit rsch_4.fa rsch_4.2bit
+maf-convert psl rsch_4_lastal.maf > rsch_4_lastal.psl
+axtChain -linearGap=loose -psl rsch_4_lastal.psl -faQ -faT tair10.fa rsch_4.fa rsch_4_lastal.chain
+chainMergeSort rsch_4_lastal.chain > rsch_4_lastal.all.chain
+chainPreNet rsch_4_lastal.all.chain col.size rsch_4.size rsch_4_lastal.preNet
+chainNet rsch_4_lastal.preNet col.size rsch_4.size rsch_4_lastal.refTarget.net rsch_4_lastal.chainNet
+netToAxt rsch_4_lastal.refTarget.net rsch_4_lastal.preNet col.2bit rsch_4.2bit stdout | axtSort stdin rsch_4_lastal.axt
+axtToMaf rsch_4_lastal.axt col.size rsch_4.size rsch_4_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl rsch_4_lastal_final.maf > rsch_4_lastal_final_forsplit.maf
+cat rsch_4_lastal.maf | last-split | maf-swap | last-split | maf-swap > rsch_4_lastal_split.maf
+cat rsch_4_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > rsch_4_lastal_final_split.maf
+perl lastToMafComparsion.pl rsch_4_lastal_split.maf > rsch_4_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl rsch_4_lastal_final_split.maf > rsch_4_lastal_final_split_Comparator.maf
+
+
+
+lastal col sf_2.fa > sf_2_lastal.maf
+faSize -detailed sf_2.fa > sf_2.size
+faToTwoBit sf_2.fa sf_2.2bit
+maf-convert psl sf_2_lastal.maf > sf_2_lastal.psl
+axtChain -linearGap=loose -psl sf_2_lastal.psl -faQ -faT tair10.fa sf_2.fa sf_2_lastal.chain
+chainMergeSort sf_2_lastal.chain > sf_2_lastal.all.chain
+chainPreNet sf_2_lastal.all.chain col.size sf_2.size sf_2_lastal.preNet
+chainNet sf_2_lastal.preNet col.size sf_2.size sf_2_lastal.refTarget.net sf_2_lastal.chainNet
+netToAxt sf_2_lastal.refTarget.net sf_2_lastal.preNet col.2bit sf_2.2bit stdout | axtSort stdin sf_2_lastal.axt
+axtToMaf sf_2_lastal.axt col.size sf_2.size sf_2_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl sf_2_lastal_final.maf > sf_2_lastal_final_forsplit.maf
+cat sf_2_lastal.maf | last-split | maf-swap | last-split | maf-swap > sf_2_lastal_split.maf
+cat sf_2_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > sf_2_lastal_final_split.maf
+perl lastToMafComparsion.pl sf_2_lastal_split.maf > sf_2_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl sf_2_lastal_final_split.maf > sf_2_lastal_final_split_Comparator.maf
+
+
+
+lastal col tsu_0.fa > tsu_0_lastal.maf
+faSize -detailed tsu_0.fa > tsu_0.size
+faToTwoBit tsu_0.fa tsu_0.2bit
+maf-convert psl tsu_0_lastal.maf > tsu_0_lastal.psl
+axtChain -linearGap=loose -psl tsu_0_lastal.psl -faQ -faT tair10.fa tsu_0.fa tsu_0_lastal.chain
+chainMergeSort tsu_0_lastal.chain > tsu_0_lastal.all.chain
+chainPreNet tsu_0_lastal.all.chain col.size tsu_0.size tsu_0_lastal.preNet
+chainNet tsu_0_lastal.preNet col.size tsu_0.size tsu_0_lastal.refTarget.net tsu_0_lastal.chainNet
+netToAxt tsu_0_lastal.refTarget.net tsu_0_lastal.preNet col.2bit tsu_0.2bit stdout | axtSort stdin tsu_0_lastal.axt
+axtToMaf tsu_0_lastal.axt col.size tsu_0.size tsu_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl tsu_0_lastal_final.maf > tsu_0_lastal_final_forsplit.maf
+cat tsu_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > tsu_0_lastal_split.maf
+cat tsu_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > tsu_0_lastal_final_split.maf
+perl lastToMafComparsion.pl tsu_0_lastal_split.maf > tsu_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl tsu_0_lastal_final_split.maf > tsu_0_lastal_final_split_Comparator.maf
+
+
+
+lastal col wil_2.fa > wil_2_lastal.maf
+faSize -detailed wil_2.fa > wil_2.size
+faToTwoBit wil_2.fa wil_2.2bit
+maf-convert psl wil_2_lastal.maf > wil_2_lastal.psl
+axtChain -linearGap=loose -psl wil_2_lastal.psl -faQ -faT tair10.fa wil_2.fa wil_2_lastal.chain
+chainMergeSort wil_2_lastal.chain > wil_2_lastal.all.chain
+chainPreNet wil_2_lastal.all.chain col.size wil_2.size wil_2_lastal.preNet
+chainNet wil_2_lastal.preNet col.size wil_2.size wil_2_lastal.refTarget.net wil_2_lastal.chainNet
+netToAxt wil_2_lastal.refTarget.net wil_2_lastal.preNet col.2bit wil_2.2bit stdout | axtSort stdin wil_2_lastal.axt
+axtToMaf wil_2_lastal.axt col.size wil_2.size wil_2_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl wil_2_lastal_final.maf > wil_2_lastal_final_forsplit.maf
+cat wil_2_lastal.maf | last-split | maf-swap | last-split | maf-swap > wil_2_lastal_split.maf
+cat wil_2_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > wil_2_lastal_final_split.maf
+perl lastToMafComparsion.pl wil_2_lastal_split.maf > wil_2_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl wil_2_lastal_final_split.maf > wil_2_lastal_final_split_Comparator.maf
+
+
+lastal col ws_0.fa > ws_0_lastal.maf
+faSize -detailed ws_0.fa > ws_0.size
+faToTwoBit ws_0.fa ws_0.2bit
+maf-convert psl ws_0_lastal.maf > ws_0_lastal.psl
+axtChain -linearGap=loose -psl ws_0_lastal.psl -faQ -faT tair10.fa ws_0.fa ws_0_lastal.chain
+chainMergeSort ws_0_lastal.chain > ws_0_lastal.all.chain
+chainPreNet ws_0_lastal.all.chain col.size ws_0.size ws_0_lastal.preNet
+chainNet ws_0_lastal.preNet col.size ws_0.size ws_0_lastal.refTarget.net ws_0_lastal.chainNet
+netToAxt ws_0_lastal.refTarget.net ws_0_lastal.preNet col.2bit ws_0.2bit stdout | axtSort stdin ws_0_lastal.axt
+axtToMaf ws_0_lastal.axt col.size ws_0.size ws_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl ws_0_lastal_final.maf > ws_0_lastal_final_forsplit.maf
+cat ws_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > ws_0_lastal_split.maf
+cat ws_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > ws_0_lastal_final_split.maf
+perl lastToMafComparsion.pl ws_0_lastal_split.maf > ws_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl ws_0_lastal_final_split.maf > ws_0_lastal_final_split_Comparator.maf
+
+
+lastal col wu_0.fa > wu_0_lastal.maf
+faSize -detailed wu_0.fa > wu_0.size
+faToTwoBit wu_0.fa wu_0.2bit
+maf-convert psl wu_0_lastal.maf > wu_0_lastal.psl
+axtChain -linearGap=loose -psl wu_0_lastal.psl -faQ -faT tair10.fa wu_0.fa wu_0_lastal.chain
+chainMergeSort wu_0_lastal.chain > wu_0_lastal.all.chain
+chainPreNet wu_0_lastal.all.chain col.size wu_0.size wu_0_lastal.preNet
+chainNet wu_0_lastal.preNet col.size wu_0.size wu_0_lastal.refTarget.net wu_0_lastal.chainNet
+netToAxt wu_0_lastal.refTarget.net wu_0_lastal.preNet col.2bit wu_0.2bit stdout | axtSort stdin wu_0_lastal.axt
+axtToMaf wu_0_lastal.axt col.size wu_0.size wu_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl wu_0_lastal_final.maf > wu_0_lastal_final_forsplit.maf
+cat wu_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > wu_0_lastal_split.maf
+cat wu_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > wu_0_lastal_final_split.maf
+perl lastToMafComparsion.pl wu_0_lastal_split.maf > wu_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl wu_0_lastal_final_split.maf > wu_0_lastal_final_split_Comparator.maf
+
+
+lastal col zu_0.fa > zu_0_lastal.maf
+faSize -detailed zu_0.fa > zu_0.size
+faToTwoBit zu_0.fa zu_0.2bit
+maf-convert psl zu_0_lastal.maf > zu_0_lastal.psl
+axtChain -linearGap=loose -psl zu_0_lastal.psl -faQ -faT tair10.fa zu_0.fa zu_0_lastal.chain
+chainMergeSort zu_0_lastal.chain > zu_0_lastal.all.chain
+chainPreNet zu_0_lastal.all.chain col.size zu_0.size zu_0_lastal.preNet
+chainNet zu_0_lastal.preNet col.size zu_0.size zu_0_lastal.refTarget.net zu_0_lastal.chainNet
+netToAxt zu_0_lastal.refTarget.net zu_0_lastal.preNet col.2bit zu_0.2bit stdout | axtSort stdin zu_0_lastal.axt
+axtToMaf zu_0_lastal.axt col.size zu_0.size zu_0_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl zu_0_lastal_final.maf > zu_0_lastal_final_forsplit.maf
+cat zu_0_lastal.maf | last-split | maf-swap | last-split | maf-swap > zu_0_lastal_split.maf
+cat zu_0_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > zu_0_lastal_final_split.maf
+perl lastToMafComparsion.pl zu_0_lastal_split.maf > zu_0_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl zu_0_lastal_final_split.maf > zu_0_lastal_final_split_Comparator.maf
+
+
+
+/usr/bin/time -v bash last_bur_0.sh > last_bur_0.log 2>&1
+/usr/bin/time -v bash last_can_0.sh > last_can_0.log 2>&1
+/usr/bin/time -v bash last_ct_1.sh > last_ct_1.log 2>&1
+/usr/bin/time -v bash last_edi_0.sh > last_edi_0.log 2>&1
+/usr/bin/time -v bash last_hi_0.sh > last_hi_0.log 2>&1
+/usr/bin/time -v bash last_kn_0.sh > last_kn_0.log 2>&1
+/usr/bin/time -v bash last_ler_0.sh > last_ler_0.log 2>&1
+/usr/bin/time -v bash last_mt_0.sh > last_mt_0.log 2>&1
+/usr/bin/time -v bash last_no_0.sh > last_no_0.log 2>&1
+/usr/bin/time -v bash last_oy_0.sh > last_oy_0.log 2>&1
+/usr/bin/time -v bash last_po_0.sh > last_po_0.log 2>&1
+/usr/bin/time -v bash last_rsch_4.sh > last_rsch_4.log 2>&1
+/usr/bin/time -v bash last_sf_2.sh > last_sf_2.log 2>&1
+/usr/bin/time -v bash last_tsu_0.sh > last_tsu_0.log 2>&1
+/usr/bin/time -v bash last_wil_2.sh > last_wil_2.log 2>&1
+/usr/bin/time -v bash last_ws_0.sh > last_ws_0.log 2>&1
+/usr/bin/time -v bash last_wu_0.sh > last_wu_0.log 2>&1
+/usr/bin/time -v bash last_zu_0.sh > last_zu_0.log 2>&1
+
+
+```
+
+
+Evaluate LAST one-to-one alignments
+```
+python3 CompareMafAndCheckMafCoverage.py col_bur.maf bur_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_can.maf can_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_ct.maf ct_1_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_edi.maf edi_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_hi.maf hi_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_kn.maf kn_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_ler.maf ler_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_mt.maf mt_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_no.maf no_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_oy.maf oy_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_po.maf po_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_rsch.maf rsch_4_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_sf.maf sf_2_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_tsu.maf tsu_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_wil.maf wil_2_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_ws.maf ws_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_wu.maf wu_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_zu.maf zu_0_lastal_split_Comparator.maf
+
+python3 CompareMafAndCheckMafCoverage.py col_bur.maf bur_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_can.maf can_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_ct.maf ct_1_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_edi.maf edi_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_hi.maf hi_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_kn.maf kn_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_ler.maf ler_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_mt.maf mt_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_no.maf no_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_oy.maf oy_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_po.maf po_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_rsch.maf rsch_4_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_sf.maf sf_2_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_tsu.maf tsu_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_wil.maf wil_2_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_ws.maf ws_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_wu.maf wu_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverage.py col_zu.maf zu_0_lastal_final_split_Comparator.maf
+
+
+
+python3 CompareMafAndCheckMafCoverageAll.py col_bur.maf bur_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_can.maf can_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ct.maf ct_1_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_edi.maf edi_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_hi.maf hi_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_kn.maf kn_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ler.maf ler_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_mt.maf mt_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_no.maf no_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_oy.maf oy_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_po.maf po_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_rsch.maf rsch_4_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_sf.maf sf_2_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_tsu.maf tsu_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wil.maf wil_2_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ws.maf ws_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wu.maf wu_0_lastal_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_zu.maf zu_0_lastal_split_Comparator.maf
+
+python3 CompareMafAndCheckMafCoverageAll.py col_bur.maf bur_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_can.maf can_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ct.maf ct_1_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_edi.maf edi_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_hi.maf hi_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_kn.maf kn_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ler.maf ler_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_mt.maf mt_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_no.maf no_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_oy.maf oy_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_po.maf po_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_rsch.maf rsch_4_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_sf.maf sf_2_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_tsu.maf tsu_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wil.maf wil_2_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ws.maf ws_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wu.maf wu_0_lastal_final_split_Comparator.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_zu.maf zu_0_lastal_final_split_Comparator.maf
+
+```
+
+Perform genome alignment using MUMmer4 Vrc1
+```
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.bur_0.short.sam tair10.fa bur_0.fa > nucmer_bur_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.can_0.short.sam tair10.fa can_0.fa > nucmer_can_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.ct_1.short.sam tair10.fa ct_1.fa > nucmer_ct_1.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.edi_0.short.sam tair10.fa edi_0.fa > nucmer_edi_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.hi_0.short.sam tair10.fa hi_0.fa > nucmer_hi_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.kn_0.short.sam tair10.fa kn_0.fa > nucmer_kn_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.ler_0.short.sam tair10.fa ler_0.fa > nucmer_ler_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.mt_0.short.sam tair10.fa mt_0.fa > nucmer_mt_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.no_0.short.sam tair10.fa no_0.fa > nucmer_no_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.oy_0.short.sam tair10.fa oy_0.fa > nucmer_oy_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.po_0.short.sam tair10.fa po_0.fa > nucmer_po_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.rsch_4.short.sam tair10.fa rsch_4.fa > nucmer_rsch_4.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.sf_2.short.sam tair10.fa sf_2.fa > nucmer_sf_2.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.tsu_0.short.sam tair10.fa tsu_0.fa > nucmer_tsu_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.wil_2.short.sam tair10.fa wil_2.fa > nucmer_wil_2.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.ws_0.short.sam tair10.fa ws_0.fa > nucmer_ws_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.wu_0.short.sam tair10.fa wu_0.fa > nucmer_wu_0.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.zu_0.short.sam tair10.fa zu_0.fa > nucmer_zu_0.log 2>&1
+```
+
+Reformat MUMmer4 SAM format output into MAF format
+```
+anchorwave sam2maf -r tair10.fa -q bur_0.fa -s mumer.bur_0.short.sam -o mumer.bur_0.short.maf
+anchorwave sam2maf -r tair10.fa -q can_0.fa -s mumer.can_0.short.sam -o mumer.can_0.short.maf
+anchorwave sam2maf -r tair10.fa -q ct_1.fa -s mumer.ct_1.short.sam -o mumer.ct_1.short.maf
+anchorwave sam2maf -r tair10.fa -q edi_0.fa -s mumer.edi_0.short.sam -o mumer.edi_0.short.maf
+anchorwave sam2maf -r tair10.fa -q hi_0.fa -s mumer.hi_0.short.sam -o mumer.hi_0.short.maf
+anchorwave sam2maf -r tair10.fa -q kn_0.fa -s mumer.kn_0.short.sam -o mumer.kn_0.short.maf
+anchorwave sam2maf -r tair10.fa -q ler_0.fa -s mumer.ler_0.short.sam -o mumer.ler_0.short.maf
+anchorwave sam2maf -r tair10.fa -q mt_0.fa -s mumer.mt_0.short.sam -o mumer.mt_0.short.maf
+anchorwave sam2maf -r tair10.fa -q no_0.fa -s mumer.no_0.short.sam -o mumer.no_0.short.maf
+anchorwave sam2maf -r tair10.fa -q oy_0.fa -s mumer.oy_0.short.sam -o mumer.oy_0.short.maf
+anchorwave sam2maf -r tair10.fa -q po_0.fa -s mumer.po_0.short.sam -o mumer.po_0.short.maf
+anchorwave sam2maf -r tair10.fa -q rsch_4.fa -s mumer.rsch_4.short.sam -o mumer.rsch_4.short.maf
+anchorwave sam2maf -r tair10.fa -q sf_2.fa -s mumer.sf_2.short.sam -o mumer.sf_2.short.maf
+anchorwave sam2maf -r tair10.fa -q tsu_0.fa -s mumer.tsu_0.short.sam -o mumer.tsu_0.short.maf
+anchorwave sam2maf -r tair10.fa -q wil_2.fa -s mumer.wil_2.short.sam -o mumer.wil_2.short.maf
+anchorwave sam2maf -r tair10.fa -q ws_0.fa -s mumer.ws_0.short.sam -o mumer.ws_0.short.maf
+anchorwave sam2maf -r tair10.fa -q wu_0.fa -s mumer.wu_0.short.sam -o mumer.wu_0.short.maf
+anchorwave sam2maf -r tair10.fa -q zu_0.fa -s mumer.zu_0.short.sam -o mumer.zu_0.short.maf
+```
+
+Evaluate the performance of MUMmer4
+```
+python3 CompareMafAndCheckMafCoverage.py col_bur.maf mumer.bur_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_can.maf mumer.can_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_ct.maf mumer.ct_1.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_edi.maf mumer.edi_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_hi.maf mumer.hi_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_kn.maf mumer.kn_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_ler.maf mumer.ler_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_mt.maf mumer.mt_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_no.maf mumer.no_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_oy.maf mumer.oy_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_po.maf mumer.po_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_rsch.maf mumer.rsch_4.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_sf.maf mumer.sf_2.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_tsu.maf mumer.tsu_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_wil.maf mumer.wil_2.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_ws.maf mumer.ws_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_wu.maf mumer.wu_0.short.maf
+python3 CompareMafAndCheckMafCoverage.py col_zu.maf mumer.zu_0.short.maf
+
+
+python3 CompareMafAndCheckMafCoverageAll.py col_bur.maf mumer.bur_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_can.maf mumer.can_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ct.maf mumer.ct_1.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_edi.maf mumer.edi_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_hi.maf mumer.hi_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_kn.maf mumer.kn_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ler.maf mumer.ler_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_mt.maf mumer.mt_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_no.maf mumer.no_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_oy.maf mumer.oy_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_po.maf mumer.po_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_rsch.maf mumer.rsch_4.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_sf.maf mumer.sf_2.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_tsu.maf mumer.tsu_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wil.maf mumer.wil_2.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ws.maf mumer.ws_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wu.maf mumer.wu_0.short.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_zu.maf mumer.zu_0.short.maf
+```
+
+Perform genome alignment using GSAlign
+```
+/usr/bin/time GSAlign -r tair10.fa -q bur_0.fa -t 1 -o bur_0_gsalign -fmt 1 > GSAlign_bur_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q can_0.fa -t 1 -o can_0_gsalign -fmt 1 > GSAlign_can_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q ct_1.fa -t 1 -o ct_1_gsalign -fmt 1 > GSAlign_ct_1.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q edi_0.fa -t 1 -o edi_0_gsalign -fmt 1 > GSAlign_edi_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q hi_0.fa -t 1 -o hi_0_gsalign -fmt 1 > GSAlign_hi_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q kn_0.fa -t 1 -o kn_0_gsalign -fmt 1 > GSAlign_kn_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q ler_0.fa -t 1 -o ler_0_gsalign -fmt 1 > GSAlign_ler_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q mt_0.fa -t 1 -o mt_0_gsalign -fmt 1 > GSAlign_mt_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q no_0.fa -t 1 -o no_0_gsalign -fmt 1 > GSAlign_no_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q oy_0.fa -t 1 -o oy_0_gsalign -fmt 1 > GSAlign_oy_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q po_0.fa -t 1 -o po_0_gsalign -fmt 1 > GSAlign_po_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q rsch_4.fa -t 1 -o rsch_4_gsalign -fmt 1 > GSAlign_rsch_4.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q sf_2.fa -t 1 -o sf_2_gsalign -fmt 1 > GSAlign_sf_2.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q tsu_0.fa -t 1 -o tsu_0_gsalign -fmt 1 > GSAlign_tsu_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q wil_2.fa -t 1 -o wil_2_gsalign -fmt 1 > GSAlign_wil_2.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q ws_0.fa -t 1 -o ws_0_gsalign -fmt 1 > GSAlign_ws_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q wu_0.fa -t 1 -o wu_0_gsalign -fmt 1 > GSAlign_wu_0.log 2>&1
+/usr/bin/time GSAlign -r tair10.fa -q zu_0.fa -t 1 -o zu_0_gsalign -fmt 1 > GSAlign_zu_0.log 2>&1
+
+sed -i 's/ref./col./g' *gsalign.maf
+sed -i 's/qry./query./g' *gsalign.maf
+
+
+cat bur_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > bur_0_gsalign_temp.maf
+cat can_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > can_0_gsalign_temp.maf
+cat ct_1_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > ct_1_gsalign_temp.maf
+cat edi_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > edi_0_gsalign_temp.maf
+cat hi_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > hi_0_gsalign_temp.maf
+cat kn_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > kn_0_gsalign_temp.maf
+cat ler_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > ler_0_gsalign_temp.maf
+cat mt_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > mt_0_gsalign_temp.maf
+cat no_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > no_0_gsalign_temp.maf
+cat oy_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > oy_0_gsalign_temp.maf
+cat po_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > po_0_gsalign_temp.maf
+cat rsch_4_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > rsch_4_gsalign_temp.maf
+cat sf_2_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > sf_2_gsalign_temp.maf
+cat tsu_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > tsu_0_gsalign_temp.maf
+cat wil_2_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > wil_2_gsalign_temp.maf
+cat ws_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > ws_0_gsalign_temp.maf
+cat wu_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > wu_0_gsalign_temp.maf
+cat zu_0_gsalign.maf | awk 'length($7) == prev  { print prevline"\n"$0 } { prev = length($7); prevline=$0 }' > zu_0_gsalign_temp.maf
+
+
+sed -i '1d' bur_0_gsalign_temp.maf   
+sed -i '1d' bur_0_gsalign_temp.maf
+sed -i '1d' can_0_gsalign_temp.maf
+sed -i '1d' can_0_gsalign_temp.maf
+sed -i '1d' ct_1_gsalign_temp.maf
+sed -i '1d' ct_1_gsalign_temp.maf
+sed -i '1d' edi_0_gsalign_temp.maf
+sed -i '1d' edi_0_gsalign_temp.maf
+sed -i '1d' hi_0_gsalign_temp.maf
+sed -i '1d' hi_0_gsalign_temp.maf
+sed -i '1d' kn_0_gsalign_temp.maf
+sed -i '1d' kn_0_gsalign_temp.maf
+sed -i '1d' ler_0_gsalign_temp.maf
+sed -i '1d' ler_0_gsalign_temp.maf
+sed -i '1d' mt_0_gsalign_temp.maf
+sed -i '1d' mt_0_gsalign_temp.maf
+sed -i '1d' no_0_gsalign_temp.maf
+sed -i '1d' no_0_gsalign_temp.maf
+sed -i '1d' oy_0_gsalign_temp.maf
+sed -i '1d' oy_0_gsalign_temp.maf
+sed -i '1d' po_0_gsalign_temp.maf
+sed -i '1d' po_0_gsalign_temp.maf
+sed -i '1d' rsch_4_gsalign_temp.maf
+sed -i '1d' rsch_4_gsalign_temp.maf
+sed -i '1d' sf_2_gsalign_temp.maf
+sed -i '1d' sf_2_gsalign_temp.maf
+sed -i '1d' tsu_0_gsalign_temp.maf
+sed -i '1d' tsu_0_gsalign_temp.maf
+sed -i '1d' wil_2_gsalign_temp.maf
+sed -i '1d' wil_2_gsalign_temp.maf
+sed -i '1d' ws_0_gsalign_temp.maf
+sed -i '1d' ws_0_gsalign_temp.maf
+sed -i '1d' wu_0_gsalign_temp.maf
+sed -i '1d' wu_0_gsalign_temp.maf
+sed -i '1d' zu_0_gsalign_temp.maf
+sed -i '1d' zu_0_gsalign_temp.maf
+
+```
+
+Evaluate the performance of GSAlign
+```
+python3 CompareMafAndCheckMafCoverage.py col_bur.maf bur_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_can.maf can_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_ct.maf ct_1_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_edi.maf edi_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_hi.maf hi_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_kn.maf kn_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_ler.maf ler_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_mt.maf mt_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_no.maf no_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_oy.maf oy_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_po.maf po_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_rsch.maf rsch_4_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_sf.maf sf_2_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_tsu.maf tsu_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_wil.maf wil_2_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_ws.maf ws_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_wu.maf wu_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverage.py col_zu.maf zu_0_gsalign_temp.maf
+
+
+python3 CompareMafAndCheckMafCoverageAll.py col_bur.maf bur_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_can.maf can_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ct.maf ct_1_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_edi.maf edi_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_hi.maf hi_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_kn.maf kn_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ler.maf ler_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_mt.maf mt_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_no.maf no_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_oy.maf oy_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_po.maf po_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_rsch.maf rsch_4_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_sf.maf sf_2_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_tsu.maf tsu_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wil.maf wil_2_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_ws.maf ws_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_wu.maf wu_0_gsalign_temp.maf
+python3 CompareMafAndCheckMafCoverageAll.py col_zu.maf zu_0_gsalign_temp.maf
+
+
+```
+
+Organize the result into a single summary file named as summaryTable
+```{bash}
+
+cat bur_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tbur_0\t"$0}' > summaryTable
+cat can_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tcan_0\t"$0}' >> summaryTable
+cat ct_1.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tct_1\t"$0}' >> summaryTable
+cat edi_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tedi_0\t"$0}' >> summaryTable
+cat hi_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\thi_0\t"$0}' >> summaryTable
+cat kn_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tkn_0\t"$0}' >> summaryTable
+cat ler_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tler_0\t"$0}' >> summaryTable
+cat mt_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tmt_0\t"$0}' >> summaryTable
+cat no_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tno_0\t"$0}' >> summaryTable
+cat oy_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\toy_0\t"$0}' >> summaryTable
+cat po_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tpo_0\t"$0}' >> summaryTable
+cat rsch_4.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\trsch_4\t"$0}' >> summaryTable
+cat sf_2.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tsf_2\t"$0}' >> summaryTable
+cat tsu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\ttsu_0\t"$0}' >> summaryTable
+cat wil_2.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\twil_2\t"$0}' >> summaryTable
+cat ws_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tws_0\t"$0}' >> summaryTable
+cat wu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\twu_0\t"$0}' >> summaryTable
+cat zu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tzu_0\t"$0}' >> summaryTable
+
+cat minimap2_asm5_bur_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tbur_0\t"$0}' >> summaryTable
+cat minimap2_asm5_can_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tcan_0\t"$0}' >> summaryTable
+cat minimap2_asm5_ct_1.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tct_1\t"$0}' >> summaryTable
+cat minimap2_asm5_edi_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tedi_0\t"$0}' >> summaryTable
+cat minimap2_asm5_hi_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\thi_0\t"$0}' >> summaryTable
+cat minimap2_asm5_kn_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tkn_0\t"$0}' >> summaryTable
+cat minimap2_asm5_ler_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tler_0\t"$0}' >> summaryTable
+cat minimap2_asm5_mt_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tmt_0\t"$0}' >> summaryTable
+cat minimap2_asm5_no_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tno_0\t"$0}' >> summaryTable
+cat minimap2_asm5_oy_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\toy_0\t"$0}' >> summaryTable
+cat minimap2_asm5_po_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tpo_0\t"$0}' >> summaryTable
+cat minimap2_asm5_rsch_4.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\trsch_4\t"$0}' >> summaryTable
+cat minimap2_asm5_sf_2.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tsf_2\t"$0}' >> summaryTable
+cat minimap2_asm5_tsu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\ttsu_0\t"$0}' >> summaryTable
+cat minimap2_asm5_wil_2.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\twil_2\t"$0}' >> summaryTable
+cat minimap2_asm5_ws_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tws_0\t"$0}' >> summaryTable
+cat minimap2_asm5_wu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\twu_0\t"$0}' >> summaryTable
+cat minimap2_asm5_zu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tzu_0\t"$0}' >> summaryTable
+
+cat minimap2_asm10_bur_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tbur_0\t"$0}' >> summaryTable
+cat minimap2_asm10_can_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tcan_0\t"$0}' >> summaryTable
+cat minimap2_asm10_ct_1.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tct_1\t"$0}' >> summaryTable
+cat minimap2_asm10_edi_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tedi_0\t"$0}' >> summaryTable
+cat minimap2_asm10_hi_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\thi_0\t"$0}' >> summaryTable
+cat minimap2_asm10_kn_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tkn_0\t"$0}' >> summaryTable
+cat minimap2_asm10_ler_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tler_0\t"$0}' >> summaryTable
+cat minimap2_asm10_mt_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tmt_0\t"$0}' >> summaryTable
+cat minimap2_asm10_no_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tno_0\t"$0}' >> summaryTable
+cat minimap2_asm10_oy_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\toy_0\t"$0}' >> summaryTable
+cat minimap2_asm10_po_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tpo_0\t"$0}' >> summaryTable
+cat minimap2_asm10_rsch_4.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\trsch_4\t"$0}' >> summaryTable
+cat minimap2_asm10_sf_2.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tsf_2\t"$0}' >> summaryTable
+cat minimap2_asm10_tsu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\ttsu_0\t"$0}' >> summaryTable
+cat minimap2_asm10_wil_2.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\twil_2\t"$0}' >> summaryTable
+cat minimap2_asm10_ws_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tws_0\t"$0}' >> summaryTable
+cat minimap2_asm10_wu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\twu_0\t"$0}' >> summaryTable
+cat minimap2_asm10_zu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tzu_0\t"$0}' >> summaryTable
+
+cat minimap2_asm20_bur_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tbur_0\t"$0}' >> summaryTable
+cat minimap2_asm20_can_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tcan_0\t"$0}' >> summaryTable
+cat minimap2_asm20_ct_1.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tct_1\t"$0}' >> summaryTable
+cat minimap2_asm20_edi_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tedi_0\t"$0}' >> summaryTable
+cat minimap2_asm20_hi_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\thi_0\t"$0}' >> summaryTable
+cat minimap2_asm20_kn_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tkn_0\t"$0}' >> summaryTable
+cat minimap2_asm20_ler_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tler_0\t"$0}' >> summaryTable
+cat minimap2_asm20_mt_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tmt_0\t"$0}' >> summaryTable
+cat minimap2_asm20_no_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tno_0\t"$0}' >> summaryTable
+cat minimap2_asm20_oy_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\toy_0\t"$0}' >> summaryTable
+cat minimap2_asm20_po_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tpo_0\t"$0}' >> summaryTable
+cat minimap2_asm20_rsch_4.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\trsch_4\t"$0}' >> summaryTable
+cat minimap2_asm20_sf_2.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tsf_2\t"$0}' >> summaryTable
+cat minimap2_asm20_tsu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\ttsu_0\t"$0}' >> summaryTable
+cat minimap2_asm20_wil_2.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\twil_2\t"$0}' >> summaryTable
+cat minimap2_asm20_ws_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tws_0\t"$0}' >> summaryTable
+cat minimap2_asm20_wu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\twu_0\t"$0}' >> summaryTable
+cat minimap2_asm20_zu_0.maf.aliEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tzu_0\t"$0}' >> summaryTable
+
+
+
+cat mumer.bur_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tbur_0\t"$0}' >> summaryTable
+cat mumer.can_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tcan_0\t"$0}' >> summaryTable
+cat mumer.ct_1.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tct_1\t"$0}' >> summaryTable
+cat mumer.edi_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tedi_0\t"$0}' >> summaryTable
+cat mumer.hi_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\thi_0\t"$0}' >> summaryTable
+cat mumer.kn_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tkn_0\t"$0}' >> summaryTable
+cat mumer.ler_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tler_0\t"$0}' >> summaryTable
+cat mumer.mt_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tmt_0\t"$0}' >> summaryTable
+cat mumer.no_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tno_0\t"$0}' >> summaryTable
+cat mumer.oy_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\toy_0\t"$0}' >> summaryTable
+cat mumer.po_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tpo_0\t"$0}' >> summaryTable
+cat mumer.rsch_4.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\trsch_4\t"$0}' >> summaryTable
+cat mumer.sf_2.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tsf_2\t"$0}' >> summaryTable
+cat mumer.tsu_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\ttsu_0\t"$0}' >> summaryTable
+cat mumer.wil_2.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\twil_2\t"$0}' >> summaryTable
+cat mumer.ws_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tws_0\t"$0}' >> summaryTable
+cat mumer.wu_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\twu_0\t"$0}' >> summaryTable
+cat mumer.zu_0.short.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tzu_0\t"$0}' >> summaryTable
+
+
+
+
+
+cat bur_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tbur_0\t"$0}' >> summaryTable
+cat can_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tcan_0\t"$0}' >> summaryTable
+cat ct_1_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tct_1\t"$0}' >> summaryTable
+cat edi_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tedi_0\t"$0}' >> summaryTable
+cat hi_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\thi_0\t"$0}' >> summaryTable
+cat kn_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tkn_0\t"$0}' >> summaryTable
+cat ler_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tler_0\t"$0}' >> summaryTable
+cat mt_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tmt_0\t"$0}' >> summaryTable
+cat no_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tno_0\t"$0}' >> summaryTable
+cat oy_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\toy_0\t"$0}' >> summaryTable
+cat po_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tpo_0\t"$0}' >> summaryTable
+cat rsch_4_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\trsch_4\t"$0}' >> summaryTable
+cat sf_2_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tsf_2\t"$0}' >> summaryTable
+cat tsu_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\ttsu_0\t"$0}' >> summaryTable
+cat wil_2_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\twil_2\t"$0}' >> summaryTable
+cat ws_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tws_0\t"$0}' >> summaryTable
+cat wu_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\twu_0\t"$0}' >> summaryTable
+cat zu_0_gsalign_temp.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tzu_0\t"$0}' >> summaryTable
+
+
+
+cat bur_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tbur_0\t"$0}' >> summaryTable
+cat can_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tcan_0\t"$0}' >> summaryTable
+cat ct_1_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tct_1\t"$0}' >> summaryTable
+cat edi_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tedi_0\t"$0}' >> summaryTable
+cat hi_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\thi_0\t"$0}' >> summaryTable
+cat kn_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tkn_0\t"$0}' >> summaryTable
+cat ler_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tler_0\t"$0}' >> summaryTable
+cat mt_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tmt_0\t"$0}' >> summaryTable
+cat no_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tno_0\t"$0}' >> summaryTable
+cat oy_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\toy_0\t"$0}' >> summaryTable
+cat po_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tpo_0\t"$0}' >> summaryTable
+cat rsch_4_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\trsch_4\t"$0}' >> summaryTable
+cat sf_2_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tsf_2\t"$0}' >> summaryTable
+cat tsu_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\ttsu_0\t"$0}' >> summaryTable
+cat wil_2_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\twil_2\t"$0}' >> summaryTable
+cat ws_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tws_0\t"$0}' >> summaryTable
+cat wu_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\twu_0\t"$0}' >> summaryTable
+cat zu_0_lastal_final_split_Comparator.maf.aliEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tzu_0\t"$0}' >> summaryTable
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cat bur_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tbur_0\t"$0}' > allSummaryTable
+cat can_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tcan_0\t"$0}' >> allSummaryTable
+cat ct_1.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tct_1\t"$0}' >> allSummaryTable
+cat edi_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tedi_0\t"$0}' >> allSummaryTable
+cat hi_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\thi_0\t"$0}' >> allSummaryTable
+cat kn_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tkn_0\t"$0}' >> allSummaryTable
+cat ler_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tler_0\t"$0}' >> allSummaryTable
+cat mt_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tmt_0\t"$0}' >> allSummaryTable
+cat no_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tno_0\t"$0}' >> allSummaryTable
+cat oy_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\toy_0\t"$0}' >> allSummaryTable
+cat po_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tpo_0\t"$0}' >> allSummaryTable
+cat rsch_4.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\trsch_4\t"$0}' >> allSummaryTable
+cat sf_2.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tsf_2\t"$0}' >> allSummaryTable
+cat tsu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\ttsu_0\t"$0}' >> allSummaryTable
+cat wil_2.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\twil_2\t"$0}' >> allSummaryTable
+cat ws_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tws_0\t"$0}' >> allSummaryTable
+cat wu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\twu_0\t"$0}' >> allSummaryTable
+cat zu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "AnchorWave\tAnchorWave\tzu_0\t"$0}' >> allSummaryTable
+
+
+
+cat minimap2_asm5_bur_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tbur_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_can_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tcan_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_ct_1.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tct_1\t"$0}' >> allSummaryTable
+cat minimap2_asm5_edi_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tedi_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_hi_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\thi_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_kn_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tkn_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_ler_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tler_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_mt_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tmt_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_no_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tno_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_oy_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\toy_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_po_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tpo_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_rsch_4.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\trsch_4\t"$0}' >> allSummaryTable
+cat minimap2_asm5_sf_2.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tsf_2\t"$0}' >> allSummaryTable
+cat minimap2_asm5_tsu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\ttsu_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_wil_2.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\twil_2\t"$0}' >> allSummaryTable
+cat minimap2_asm5_ws_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tws_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_wu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\twu_0\t"$0}' >> allSummaryTable
+cat minimap2_asm5_zu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm5\tzu_0\t"$0}' >> allSummaryTable
+
+cat minimap2_asm10_bur_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tbur_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_can_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tcan_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_ct_1.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tct_1\t"$0}' >> allSummaryTable
+cat minimap2_asm10_edi_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tedi_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_hi_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\thi_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_kn_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tkn_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_ler_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tler_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_mt_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tmt_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_no_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tno_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_oy_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\toy_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_po_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tpo_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_rsch_4.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\trsch_4\t"$0}' >> allSummaryTable
+cat minimap2_asm10_sf_2.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tsf_2\t"$0}' >> allSummaryTable
+cat minimap2_asm10_tsu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\ttsu_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_wil_2.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\twil_2\t"$0}' >> allSummaryTable
+cat minimap2_asm10_ws_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tws_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_wu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\twu_0\t"$0}' >> allSummaryTable
+cat minimap2_asm10_zu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm10\tzu_0\t"$0}' >> allSummaryTable
+
+cat minimap2_asm20_bur_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tbur_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_can_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tcan_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_ct_1.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tct_1\t"$0}' >> allSummaryTable
+cat minimap2_asm20_edi_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tedi_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_hi_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\thi_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_kn_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tkn_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_ler_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tler_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_mt_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tmt_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_no_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tno_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_oy_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\toy_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_po_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tpo_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_rsch_4.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\trsch_4\t"$0}' >> allSummaryTable
+cat minimap2_asm20_sf_2.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tsf_2\t"$0}' >> allSummaryTable
+cat minimap2_asm20_tsu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\ttsu_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_wil_2.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\twil_2\t"$0}' >> allSummaryTable
+cat minimap2_asm20_ws_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tws_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_wu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\twu_0\t"$0}' >> allSummaryTable
+cat minimap2_asm20_zu_0.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" |  sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' |  awk '{print "minimap2\tminimap2_asm20\tzu_0\t"$0}' >> allSummaryTable
+
+
+
+cat mumer.bur_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tbur_0\t"$0}' >> allSummaryTable
+cat mumer.can_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tcan_0\t"$0}' >> allSummaryTable
+cat mumer.ct_1.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tct_1\t"$0}' >> allSummaryTable
+cat mumer.edi_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tedi_0\t"$0}' >> allSummaryTable
+cat mumer.hi_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\thi_0\t"$0}' >> allSummaryTable
+cat mumer.kn_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tkn_0\t"$0}' >> allSummaryTable
+cat mumer.ler_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tler_0\t"$0}' >> allSummaryTable
+cat mumer.mt_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tmt_0\t"$0}' >> allSummaryTable
+cat mumer.no_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tno_0\t"$0}' >> allSummaryTable
+cat mumer.oy_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\toy_0\t"$0}' >> allSummaryTable
+cat mumer.po_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tpo_0\t"$0}' >> allSummaryTable
+cat mumer.rsch_4.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\trsch_4\t"$0}' >> allSummaryTable
+cat mumer.sf_2.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tsf_2\t"$0}' >> allSummaryTable
+cat mumer.tsu_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\ttsu_0\t"$0}' >> allSummaryTable
+cat mumer.wil_2.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\twil_2\t"$0}' >> allSummaryTable
+cat mumer.ws_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tws_0\t"$0}' >> allSummaryTable
+cat mumer.wu_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\twu_0\t"$0}' >> allSummaryTable
+cat mumer.zu_0.short.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "MUMmer4\tMUMmer4\tzu_0\t"$0}' >> allSummaryTable
+
+
+
+
+
+cat bur_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tbur_0\t"$0}' >> allSummaryTable
+cat can_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tcan_0\t"$0}' >> allSummaryTable
+cat ct_1_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tct_1\t"$0}' >> allSummaryTable
+cat edi_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tedi_0\t"$0}' >> allSummaryTable
+cat hi_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\thi_0\t"$0}' >> allSummaryTable
+cat kn_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tkn_0\t"$0}' >> allSummaryTable
+cat ler_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tler_0\t"$0}' >> allSummaryTable
+cat mt_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tmt_0\t"$0}' >> allSummaryTable
+cat no_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tno_0\t"$0}' >> allSummaryTable
+cat oy_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\toy_0\t"$0}' >> allSummaryTable
+cat po_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tpo_0\t"$0}' >> allSummaryTable
+cat rsch_4_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\trsch_4\t"$0}' >> allSummaryTable
+cat sf_2_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tsf_2\t"$0}' >> allSummaryTable
+cat tsu_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\ttsu_0\t"$0}' >> allSummaryTable
+cat wil_2_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\twil_2\t"$0}' >> allSummaryTable
+cat ws_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tws_0\t"$0}' >> allSummaryTable
+cat wu_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\twu_0\t"$0}' >> allSummaryTable
+cat zu_0_gsalign_temp.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "GSAlign\tGSAlign\tzu_0\t"$0}' >> allSummaryTable
+
+
+
+cat bur_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tbur_0\t"$0}' >> allSummaryTable
+cat can_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tcan_0\t"$0}' >> allSummaryTable
+cat ct_1_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tct_1\t"$0}' >> allSummaryTable
+cat edi_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tedi_0\t"$0}' >> allSummaryTable
+cat hi_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\thi_0\t"$0}' >> allSummaryTable
+cat kn_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tkn_0\t"$0}' >> allSummaryTable
+cat ler_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tler_0\t"$0}' >> allSummaryTable
+cat mt_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tmt_0\t"$0}' >> allSummaryTable
+cat no_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tno_0\t"$0}' >> allSummaryTable
+cat oy_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\toy_0\t"$0}' >> allSummaryTable
+cat po_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tpo_0\t"$0}' >> allSummaryTable
+cat rsch_4_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\trsch_4\t"$0}' >> allSummaryTable
+cat sf_2_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tsf_2\t"$0}' >> allSummaryTable
+cat tsu_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\ttsu_0\t"$0}' >> allSummaryTable
+cat wil_2_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\twil_2\t"$0}' >> allSummaryTable
+cat ws_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tws_0\t"$0}' >> allSummaryTable
+cat wu_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\twu_0\t"$0}' >> allSummaryTable
+cat zu_0_lastal_final_split_Comparator.maf.aliAllEvaluatioin | grep "recall\|precision\|fscore" | sed ':a;N;$!ba;s/\n//g' | sed 's/recall://g' | sed 's/precision:/\t/g' | sed 's/fscore:/\t/g' | awk '{print "LAST\tLAST+one-to-one\tzu_0\t"$0}' >> allSummaryTable
+
+
+
+
+
+
+
+
+
+
+```
+
+Check the proportion of genome being covered
+```
+maf-convert sam bur_0.maf > bur_0_AnchorWave.sam ; sed -i 's/query.//g' bur_0_AnchorWave.sam; sed -i 's/col.//g' bur_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa bur_0_AnchorWave.sam | samtools sort - > bur_0_AnchorWave.bam; samtools index bur_0_AnchorWave.bam ; samtools depth bur_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tbur_0\t"$0}' > depth
+maf-convert sam can_0.maf > can_0_AnchorWave.sam ; sed -i 's/query.//g' can_0_AnchorWave.sam; sed -i 's/col.//g' can_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa can_0_AnchorWave.sam | samtools sort - > can_0_AnchorWave.bam; samtools index can_0_AnchorWave.bam ; samtools depth can_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tcan_0\t"$0}' >> depth
+maf-convert sam ct_1.maf > ct_1_AnchorWave.sam ; sed -i 's/query.//g' ct_1_AnchorWave.sam; sed -i 's/col.//g' ct_1_AnchorWave.sam; samtools view -O BAM --reference tair10.fa ct_1_AnchorWave.sam | samtools sort - > ct_1_AnchorWave.bam; samtools index ct_1_AnchorWave.bam ; samtools depth ct_1_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tct_1\t"$0}' >> depth
+maf-convert sam edi_0.maf > edi_0_AnchorWave.sam ; sed -i 's/query.//g' edi_0_AnchorWave.sam; sed -i 's/col.//g' edi_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa edi_0_AnchorWave.sam | samtools sort - > edi_0_AnchorWave.bam; samtools index edi_0_AnchorWave.bam ; samtools depth edi_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tedi_0\t"$0}' >> depth
+maf-convert sam hi_0.maf > hi_0_AnchorWave.sam ; sed -i 's/query.//g' hi_0_AnchorWave.sam; sed -i 's/col.//g' hi_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa hi_0_AnchorWave.sam | samtools sort - > hi_0_AnchorWave.bam; samtools index hi_0_AnchorWave.bam ; samtools depth hi_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\thi_0\t"$0}' >> depth
+maf-convert sam kn_0.maf > kn_0_AnchorWave.sam ; sed -i 's/query.//g' kn_0_AnchorWave.sam; sed -i 's/col.//g' kn_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa kn_0_AnchorWave.sam | samtools sort - > kn_0_AnchorWave.bam; samtools index kn_0_AnchorWave.bam ; samtools depth kn_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tkn_0\t"$0}' >> depth
+maf-convert sam ler_0.maf > ler_0_AnchorWave.sam ; sed -i 's/query.//g' ler_0_AnchorWave.sam; sed -i 's/col.//g' ler_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa ler_0_AnchorWave.sam | samtools sort - > ler_0_AnchorWave.bam; samtools index ler_0_AnchorWave.bam ; samtools depth ler_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tler_0\t"$0}' >> depth
+maf-convert sam mt_0.maf > mt_0_AnchorWave.sam ; sed -i 's/query.//g' mt_0_AnchorWave.sam; sed -i 's/col.//g' mt_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa mt_0_AnchorWave.sam | samtools sort - > mt_0_AnchorWave.bam; samtools index mt_0_AnchorWave.bam ; samtools depth mt_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tmt_0\t"$0}' >> depth
+maf-convert sam no_0.maf > no_0_AnchorWave.sam ; sed -i 's/query.//g' no_0_AnchorWave.sam; sed -i 's/col.//g' no_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa no_0_AnchorWave.sam | samtools sort - > no_0_AnchorWave.bam; samtools index no_0_AnchorWave.bam ; samtools depth no_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tno_0\t"$0}' >> depth
+maf-convert sam oy_0.maf > oy_0_AnchorWave.sam ; sed -i 's/query.//g' oy_0_AnchorWave.sam; sed -i 's/col.//g' oy_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa oy_0_AnchorWave.sam | samtools sort - > oy_0_AnchorWave.bam; samtools index oy_0_AnchorWave.bam ; samtools depth oy_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\toy_0\t"$0}' >> depth
+maf-convert sam po_0.maf > po_0_AnchorWave.sam ; sed -i 's/query.//g' po_0_AnchorWave.sam; sed -i 's/col.//g' po_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa po_0_AnchorWave.sam | samtools sort - > po_0_AnchorWave.bam; samtools index po_0_AnchorWave.bam ; samtools depth po_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tpo_0\t"$0}' >> depth
+maf-convert sam rsch_4.maf > rsch_4_AnchorWave.sam ; sed -i 's/query.//g' rsch_4_AnchorWave.sam; sed -i 's/col.//g' rsch_4_AnchorWave.sam; samtools view -O BAM --reference tair10.fa rsch_4_AnchorWave.sam | samtools sort - > rsch_4_AnchorWave.bam; samtools index rsch_4_AnchorWave.bam ; samtools depth rsch_4_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\trsch_4\t"$0}' >> depth
+maf-convert sam sf_2.maf > sf_2_AnchorWave.sam ; sed -i 's/query.//g' sf_2_AnchorWave.sam; sed -i 's/col.//g' sf_2_AnchorWave.sam; samtools view -O BAM --reference tair10.fa sf_2_AnchorWave.sam | samtools sort - > sf_2_AnchorWave.bam; samtools index sf_2_AnchorWave.bam ; samtools depth sf_2_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tsf_2\t"$0}' >> depth
+maf-convert sam tsu_0.maf > tsu_0_AnchorWave.sam ; sed -i 's/query.//g' tsu_0_AnchorWave.sam; sed -i 's/col.//g' tsu_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa tsu_0_AnchorWave.sam | samtools sort - > tsu_0_AnchorWave.bam; samtools index tsu_0_AnchorWave.bam ; samtools depth tsu_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\ttsu_0\t"$0}' >> depth
+maf-convert sam wil_2.maf > wil_2_AnchorWave.sam ; sed -i 's/query.//g' wil_2_AnchorWave.sam; sed -i 's/col.//g' wil_2_AnchorWave.sam; samtools view -O BAM --reference tair10.fa wil_2_AnchorWave.sam | samtools sort - > wil_2_AnchorWave.bam; samtools index wil_2_AnchorWave.bam ; samtools depth wil_2_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\twil_2\t"$0}' >> depth
+maf-convert sam ws_0.maf > ws_0_AnchorWave.sam ; sed -i 's/query.//g' ws_0_AnchorWave.sam; sed -i 's/col.//g' ws_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa ws_0_AnchorWave.sam | samtools sort - > ws_0_AnchorWave.bam; samtools index ws_0_AnchorWave.bam ; samtools depth ws_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tws_0\t"$0}' >> depth
+maf-convert sam wu_0.maf > wu_0_AnchorWave.sam ; sed -i 's/query.//g' wu_0_AnchorWave.sam; sed -i 's/col.//g' wu_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa wu_0_AnchorWave.sam | samtools sort - > wu_0_AnchorWave.bam; samtools index wu_0_AnchorWave.bam ; samtools depth wu_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\twu_0\t"$0}' >> depth
+maf-convert sam zu_0.maf > zu_0_AnchorWave.sam ; sed -i 's/query.//g' zu_0_AnchorWave.sam; sed -i 's/col.//g' zu_0_AnchorWave.sam; samtools view -O BAM --reference tair10.fa zu_0_AnchorWave.sam | samtools sort - > zu_0_AnchorWave.bam; samtools index zu_0_AnchorWave.bam ; samtools depth zu_0_AnchorWave.bam | wc -l | awk '{print "AnchorWave\tAnchorWave\tzu_0\t"$0}' >> depth
+
+
+samtools sort minimap2_asm5_bur_0.sam > minimap2_asm5_bur_0.bam; samtools index minimap2_asm5_bur_0.bam;samtools depth minimap2_asm5_bur_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tbur_0\t"$0}' >> depth
+samtools sort minimap2_asm5_can_0.sam > minimap2_asm5_can_0.bam; samtools index minimap2_asm5_can_0.bam;samtools depth minimap2_asm5_can_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tcan_0\t"$0}' >> depth
+samtools sort minimap2_asm5_ct_1.sam > minimap2_asm5_ct_1.bam; samtools index minimap2_asm5_ct_1.bam;samtools depth minimap2_asm5_ct_1.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tct_1\t"$0}' >> depth
+samtools sort minimap2_asm5_edi_0.sam > minimap2_asm5_edi_0.bam; samtools index minimap2_asm5_edi_0.bam;samtools depth minimap2_asm5_edi_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tedi_0\t"$0}' >> depth
+samtools sort minimap2_asm5_hi_0.sam > minimap2_asm5_hi_0.bam; samtools index minimap2_asm5_hi_0.bam;samtools depth minimap2_asm5_hi_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\thi_0\t"$0}' >> depth
+samtools sort minimap2_asm5_kn_0.sam > minimap2_asm5_kn_0.bam; samtools index minimap2_asm5_kn_0.bam;samtools depth minimap2_asm5_kn_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tkn_0\t"$0}' >> depth
+samtools sort minimap2_asm5_ler_0.sam > minimap2_asm5_ler_0.bam; samtools index minimap2_asm5_ler_0.bam;samtools depth minimap2_asm5_ler_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tler_0\t"$0}' >> depth
+samtools sort minimap2_asm5_mt_0.sam > minimap2_asm5_mt_0.bam; samtools index minimap2_asm5_mt_0.bam;samtools depth minimap2_asm5_mt_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tmt_0\t"$0}' >> depth
+samtools sort minimap2_asm5_no_0.sam > minimap2_asm5_no_0.bam; samtools index minimap2_asm5_no_0.bam;samtools depth minimap2_asm5_no_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tno_0\t"$0}' >> depth
+samtools sort minimap2_asm5_oy_0.sam > minimap2_asm5_oy_0.bam; samtools index minimap2_asm5_oy_0.bam;samtools depth minimap2_asm5_oy_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\toy_0\t"$0}' >> depth
+samtools sort minimap2_asm5_po_0.sam > minimap2_asm5_po_0.bam; samtools index minimap2_asm5_po_0.bam;samtools depth minimap2_asm5_po_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tpo_0\t"$0}' >> depth
+samtools sort minimap2_asm5_rsch_4.sam > minimap2_asm5_rsch_4.bam; samtools index minimap2_asm5_rsch_4.bam;samtools depth minimap2_asm5_rsch_4.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\trsch_4\t"$0}' >> depth
+samtools sort minimap2_asm5_sf_2.sam > minimap2_asm5_sf_2.bam; samtools index minimap2_asm5_sf_2.bam;samtools depth minimap2_asm5_sf_2.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tsf_2\t"$0}' >> depth
+samtools sort minimap2_asm5_tsu_0.sam > minimap2_asm5_tsu_0.bam; samtools index minimap2_asm5_tsu_0.bam;samtools depth minimap2_asm5_tsu_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\ttsu_0\t"$0}' >> depth
+samtools sort minimap2_asm5_wil_2.sam > minimap2_asm5_wil_2.bam; samtools index minimap2_asm5_wil_2.bam;samtools depth minimap2_asm5_wil_2.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\twil_2\t"$0}' >> depth
+samtools sort minimap2_asm5_ws_0.sam > minimap2_asm5_ws_0.bam; samtools index minimap2_asm5_ws_0.bam;samtools depth minimap2_asm5_ws_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tws_0\t"$0}' >> depth
+samtools sort minimap2_asm5_wu_0.sam > minimap2_asm5_wu_0.bam; samtools index minimap2_asm5_wu_0.bam;samtools depth minimap2_asm5_wu_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\twu_0\t"$0}' >> depth
+samtools sort minimap2_asm5_zu_0.sam > minimap2_asm5_zu_0.bam; samtools index minimap2_asm5_zu_0.bam;samtools depth minimap2_asm5_zu_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm5\tzu_0\t"$0}' >> depth
+
+samtools sort minimap2_asm10_bur_0.sam > minimap2_bur_0.bam; samtools index minimap2_bur_0.bam;samtools depth minimap2_bur_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tbur_0\t"$0}' >> depth
+samtools sort minimap2_asm10_can_0.sam > minimap2_can_0.bam; samtools index minimap2_can_0.bam;samtools depth minimap2_can_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tcan_0\t"$0}' >> depth
+samtools sort minimap2_asm10_ct_1.sam > minimap2_ct_1.bam; samtools index minimap2_ct_1.bam;samtools depth minimap2_ct_1.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tct_1\t"$0}' >> depth
+samtools sort minimap2_asm10_edi_0.sam > minimap2_edi_0.bam; samtools index minimap2_edi_0.bam;samtools depth minimap2_edi_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tedi_0\t"$0}' >> depth
+samtools sort minimap2_asm10_hi_0.sam > minimap2_hi_0.bam; samtools index minimap2_hi_0.bam;samtools depth minimap2_hi_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\thi_0\t"$0}' >> depth
+samtools sort minimap2_asm10_kn_0.sam > minimap2_kn_0.bam; samtools index minimap2_kn_0.bam;samtools depth minimap2_kn_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tkn_0\t"$0}' >> depth
+samtools sort minimap2_asm10_ler_0.sam > minimap2_ler_0.bam; samtools index minimap2_ler_0.bam;samtools depth minimap2_ler_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tler_0\t"$0}' >> depth
+samtools sort minimap2_asm10_mt_0.sam > minimap2_mt_0.bam; samtools index minimap2_mt_0.bam;samtools depth minimap2_mt_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tmt_0\t"$0}' >> depth
+samtools sort minimap2_asm10_no_0.sam > minimap2_no_0.bam; samtools index minimap2_no_0.bam;samtools depth minimap2_no_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tno_0\t"$0}' >> depth
+samtools sort minimap2_asm10_oy_0.sam > minimap2_oy_0.bam; samtools index minimap2_oy_0.bam;samtools depth minimap2_oy_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\toy_0\t"$0}' >> depth
+samtools sort minimap2_asm10_po_0.sam > minimap2_po_0.bam; samtools index minimap2_po_0.bam;samtools depth minimap2_po_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tpo_0\t"$0}' >> depth
+samtools sort minimap2_asm10_rsch_4.sam > minimap2_rsch_4.bam; samtools index minimap2_rsch_4.bam;samtools depth minimap2_rsch_4.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\trsch_4\t"$0}' >> depth
+samtools sort minimap2_asm10_sf_2.sam > minimap2_sf_2.bam; samtools index minimap2_sf_2.bam;samtools depth minimap2_sf_2.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tsf_2\t"$0}' >> depth
+samtools sort minimap2_asm10_tsu_0.sam > minimap2_tsu_0.bam; samtools index minimap2_tsu_0.bam;samtools depth minimap2_tsu_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\ttsu_0\t"$0}' >> depth
+samtools sort minimap2_asm10_wil_2.sam > minimap2_wil_2.bam; samtools index minimap2_wil_2.bam;samtools depth minimap2_wil_2.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\twil_2\t"$0}' >> depth
+samtools sort minimap2_asm10_ws_0.sam > minimap2_ws_0.bam; samtools index minimap2_ws_0.bam;samtools depth minimap2_ws_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tws_0\t"$0}' >> depth
+samtools sort minimap2_asm10_wu_0.sam > minimap2_wu_0.bam; samtools index minimap2_wu_0.bam;samtools depth minimap2_wu_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\twu_0\t"$0}' >> depth
+samtools sort minimap2_asm10_zu_0.sam > minimap2_zu_0.bam; samtools index minimap2_zu_0.bam;samtools depth minimap2_zu_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm10\tzu_0\t"$0}' >> depth
+
+samtools sort minimap2_asm20_bur_0.sam > minimap2_asm20_bur_0.bam; samtools index minimap2_asm20_bur_0.bam;samtools depth minimap2_asm20_bur_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tbur_0\t"$0}' >> depth
+samtools sort minimap2_asm20_can_0.sam > minimap2_asm20_can_0.bam; samtools index minimap2_asm20_can_0.bam;samtools depth minimap2_asm20_can_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tcan_0\t"$0}' >> depth
+samtools sort minimap2_asm20_ct_1.sam > minimap2_asm20_ct_1.bam; samtools index minimap2_asm20_ct_1.bam;samtools depth minimap2_asm20_ct_1.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tct_1\t"$0}' >> depth
+samtools sort minimap2_asm20_edi_0.sam > minimap2_asm20_edi_0.bam; samtools index minimap2_asm20_edi_0.bam;samtools depth minimap2_asm20_edi_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tedi_0\t"$0}' >> depth
+samtools sort minimap2_asm20_hi_0.sam > minimap2_asm20_hi_0.bam; samtools index minimap2_asm20_hi_0.bam;samtools depth minimap2_asm20_hi_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\thi_0\t"$0}' >> depth
+samtools sort minimap2_asm20_kn_0.sam > minimap2_asm20_kn_0.bam; samtools index minimap2_asm20_kn_0.bam;samtools depth minimap2_asm20_kn_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tkn_0\t"$0}' >> depth
+samtools sort minimap2_asm20_ler_0.sam > minimap2_asm20_ler_0.bam; samtools index minimap2_asm20_ler_0.bam;samtools depth minimap2_asm20_ler_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tler_0\t"$0}' >> depth
+samtools sort minimap2_asm20_mt_0.sam > minimap2_asm20_mt_0.bam; samtools index minimap2_asm20_mt_0.bam;samtools depth minimap2_asm20_mt_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tmt_0\t"$0}' >> depth
+samtools sort minimap2_asm20_no_0.sam > minimap2_asm20_no_0.bam; samtools index minimap2_asm20_no_0.bam;samtools depth minimap2_asm20_no_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tno_0\t"$0}' >> depth
+samtools sort minimap2_asm20_oy_0.sam > minimap2_asm20_oy_0.bam; samtools index minimap2_asm20_oy_0.bam;samtools depth minimap2_asm20_oy_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\toy_0\t"$0}' >> depth
+samtools sort minimap2_asm20_po_0.sam > minimap2_asm20_po_0.bam; samtools index minimap2_asm20_po_0.bam;samtools depth minimap2_asm20_po_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tpo_0\t"$0}' >> depth
+samtools sort minimap2_asm20_rsch_4.sam > minimap2_asm20_rsch_4.bam; samtools index minimap2_asm20_rsch_4.bam;samtools depth minimap2_asm20_rsch_4.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\trsch_4\t"$0}' >> depth
+samtools sort minimap2_asm20_sf_2.sam > minimap2_asm20_sf_2.bam; samtools index minimap2_asm20_sf_2.bam;samtools depth minimap2_asm20_sf_2.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tsf_2\t"$0}' >> depth
+samtools sort minimap2_asm20_tsu_0.sam > minimap2_asm20_tsu_0.bam; samtools index minimap2_asm20_tsu_0.bam;samtools depth minimap2_asm20_tsu_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\ttsu_0\t"$0}' >> depth
+samtools sort minimap2_asm20_wil_2.sam > minimap2_asm20_wil_2.bam; samtools index minimap2_asm20_wil_2.bam;samtools depth minimap2_asm20_wil_2.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\twil_2\t"$0}' >> depth
+samtools sort minimap2_asm20_ws_0.sam > minimap2_asm20_ws_0.bam; samtools index minimap2_asm20_ws_0.bam;samtools depth minimap2_asm20_ws_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tws_0\t"$0}' >> depth
+samtools sort minimap2_asm20_wu_0.sam > minimap2_asm20_wu_0.bam; samtools index minimap2_asm20_wu_0.bam;samtools depth minimap2_asm20_wu_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\twu_0\t"$0}' >> depth
+samtools sort minimap2_asm20_zu_0.sam > minimap2_asm20_zu_0.bam; samtools index minimap2_asm20_zu_0.bam;samtools depth minimap2_asm20_zu_0.bam | wc -l | awk '{print "minimap2\tminimap2_asm20\tzu_0\t"$0}' >> depth
+
+
+
+grep -v "@"  mumer.bur_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.bur_0.short.bam; samtools index mumer.bur_0.short.bam; samtools depth mumer.bur_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tbur_0\t"$0}' >> depth
+grep -v "@"  mumer.can_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.can_0.short.bam; samtools index mumer.can_0.short.bam; samtools depth mumer.can_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tcan_0\t"$0}' >> depth
+grep -v "@"  mumer.ct_1.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.ct_1.short.bam; samtools index mumer.ct_1.short.bam; samtools depth mumer.ct_1.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tct_1\t"$0}' >> depth
+grep -v "@"  mumer.edi_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.edi_0.short.bam; samtools index mumer.edi_0.short.bam; samtools depth mumer.edi_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tedi_0\t"$0}' >> depth
+grep -v "@"  mumer.hi_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.hi_0.short.bam; samtools index mumer.hi_0.short.bam; samtools depth mumer.hi_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\thi_0\t"$0}' >> depth
+grep -v "@"  mumer.kn_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.kn_0.short.bam; samtools index mumer.kn_0.short.bam; samtools depth mumer.kn_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tkn_0\t"$0}' >> depth
+grep -v "@"  mumer.ler_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.ler_0.short.bam; samtools index mumer.ler_0.short.bam; samtools depth mumer.ler_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tler_0\t"$0}' >> depth
+grep -v "@"  mumer.mt_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.mt_0.short.bam; samtools index mumer.mt_0.short.bam; samtools depth mumer.mt_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tmt_0\t"$0}' >> depth
+grep -v "@"  mumer.no_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.no_0.short.bam; samtools index mumer.no_0.short.bam; samtools depth mumer.no_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tno_0\t"$0}' >> depth
+grep -v "@"  mumer.oy_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.oy_0.short.bam; samtools index mumer.oy_0.short.bam; samtools depth mumer.oy_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\toy_0\t"$0}' >> depth
+grep -v "@"  mumer.po_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.po_0.short.bam; samtools index mumer.po_0.short.bam; samtools depth mumer.po_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tpo_0\t"$0}' >> depth
+grep -v "@"  mumer.rsch_4.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.rsch_4.short.bam; samtools index mumer.rsch_4.short.bam; samtools depth mumer.rsch_4.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\trsch_4\t"$0}' >> depth
+grep -v "@"  mumer.sf_2.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.sf_2.short.bam; samtools index mumer.sf_2.short.bam; samtools depth mumer.sf_2.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tsf_2\t"$0}' >> depth
+awk 'NR > 4 { print }'  mumer.tsu_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.tsu_0.short.bam; samtools index mumer.tsu_0.short.bam; samtools depth mumer.tsu_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\ttsu_0\t"$0}' >> depth
+grep -v "@"  mumer.wil_2.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.wil_2.short.bam; samtools index mumer.wil_2.short.bam; samtools depth mumer.wil_2.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\twil_2\t"$0}' >> depth
+awk 'NR > 3 { print }'  mumer.ws_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.ws_0.short.bam; samtools index mumer.ws_0.short.bam; samtools depth mumer.ws_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tws_0\t"$0}' >> depth
+grep -v "@"  mumer.wu_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.wu_0.short.bam; samtools index mumer.wu_0.short.bam; samtools depth mumer.wu_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\twu_0\t"$0}' >> depth
+awk 'NR > 3 { print }'  mumer.zu_0.short.sam | samtools view -O BAM --reference tair10.fa - | samtools sort - > mumer.zu_0.short.bam; samtools index mumer.zu_0.short.bam; samtools depth mumer.zu_0.short.bam | wc -l | awk '{print "MUMmer4\tMUMmer4\tzu_0\t"$0}' >> depth
+
+
+
+maf-convert sam bur_0_lastal_final_split.maf > bur_0_lastal_final_split.sam ; sed -i 's/query.//g' bur_0_lastal_final_split.sam; sed -i 's/col.//g' bur_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa bur_0_lastal_final_split.sam | samtools sort - > bur_0_lastal_final_split.bam; samtools index bur_0_lastal_final_split.bam ; samtools depth bur_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tbur_0\t"$0}' >> depth
+maf-convert sam can_0_lastal_final_split.maf > can_0_lastal_final_split.sam ; sed -i 's/query.//g' can_0_lastal_final_split.sam; sed -i 's/col.//g' can_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa can_0_lastal_final_split.sam | samtools sort - > can_0_lastal_final_split.bam; samtools index can_0_lastal_final_split.bam ; samtools depth can_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tcan_0\t"$0}' >> depth
+maf-convert sam ct_1_lastal_final_split.maf > ct_1_lastal_final_split.sam ; sed -i 's/query.//g' ct_1_lastal_final_split.sam; sed -i 's/col.//g' ct_1_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa ct_1_lastal_final_split.sam | samtools sort - > ct_1_lastal_final_split.bam; samtools index ct_1_lastal_final_split.bam ; samtools depth ct_1_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tct_1\t"$0}' >> depth
+maf-convert sam edi_0_lastal_final_split.maf > edi_0_lastal_final_split.sam ; sed -i 's/query.//g' edi_0_lastal_final_split.sam; sed -i 's/col.//g' edi_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa edi_0_lastal_final_split.sam | samtools sort - > edi_0_lastal_final_split.bam; samtools index edi_0_lastal_final_split.bam ; samtools depth edi_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tedi_0\t"$0}' >> depth
+maf-convert sam hi_0_lastal_final_split.maf > hi_0_lastal_final_split.sam ; sed -i 's/query.//g' hi_0_lastal_final_split.sam; sed -i 's/col.//g' hi_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa hi_0_lastal_final_split.sam | samtools sort - > hi_0_lastal_final_split.bam; samtools index hi_0_lastal_final_split.bam ; samtools depth hi_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\thi_0\t"$0}' >> depth
+maf-convert sam kn_0_lastal_final_split.maf > kn_0_lastal_final_split.sam ; sed -i 's/query.//g' kn_0_lastal_final_split.sam; sed -i 's/col.//g' kn_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa kn_0_lastal_final_split.sam | samtools sort - > kn_0_lastal_final_split.bam; samtools index kn_0_lastal_final_split.bam ; samtools depth kn_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tkn_0\t"$0}' >> depth
+maf-convert sam ler_0_lastal_final_split.maf > ler_0_lastal_final_split.sam ; sed -i 's/query.//g' ler_0_lastal_final_split.sam; sed -i 's/col.//g' ler_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa ler_0_lastal_final_split.sam | samtools sort - > ler_0_lastal_final_split.bam; samtools index ler_0_lastal_final_split.bam ; samtools depth ler_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tler_0\t"$0}' >> depth
+maf-convert sam mt_0_lastal_final_split.maf > mt_0_lastal_final_split.sam ; sed -i 's/query.//g' mt_0_lastal_final_split.sam; sed -i 's/col.//g' mt_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa mt_0_lastal_final_split.sam | samtools sort - > mt_0_lastal_final_split.bam; samtools index mt_0_lastal_final_split.bam ; samtools depth mt_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tmt_0\t"$0}' >> depth
+maf-convert sam no_0_lastal_final_split.maf > no_0_lastal_final_split.sam ; sed -i 's/query.//g' no_0_lastal_final_split.sam; sed -i 's/col.//g' no_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa no_0_lastal_final_split.sam | samtools sort - > no_0_lastal_final_split.bam; samtools index no_0_lastal_final_split.bam ; samtools depth no_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tno_0\t"$0}' >> depth
+maf-convert sam oy_0_lastal_final_split.maf > oy_0_lastal_final_split.sam ; sed -i 's/query.//g' oy_0_lastal_final_split.sam; sed -i 's/col.//g' oy_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa oy_0_lastal_final_split.sam | samtools sort - > oy_0_lastal_final_split.bam; samtools index oy_0_lastal_final_split.bam ; samtools depth oy_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\toy_0\t"$0}' >> depth
+maf-convert sam po_0_lastal_final_split.maf > po_0_lastal_final_split.sam ; sed -i 's/query.//g' po_0_lastal_final_split.sam; sed -i 's/col.//g' po_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa po_0_lastal_final_split.sam | samtools sort - > po_0_lastal_final_split.bam; samtools index po_0_lastal_final_split.bam ; samtools depth po_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tpo_0\t"$0}' >> depth
+maf-convert sam rsch_4_lastal_final_split.maf > rsch_4_lastal_final_split.sam ; sed -i 's/query.//g' rsch_4_lastal_final_split.sam; sed -i 's/col.//g' rsch_4_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa rsch_4_lastal_final_split.sam | samtools sort - > rsch_4_lastal_final_split.bam; samtools index rsch_4_lastal_final_split.bam ; samtools depth rsch_4_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\trsch_4\t"$0}' >> depth
+maf-convert sam sf_2_lastal_final_split.maf > sf_2_lastal_final_split.sam ; sed -i 's/query.//g' sf_2_lastal_final_split.sam; sed -i 's/col.//g' sf_2_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa sf_2_lastal_final_split.sam | samtools sort - > sf_2_lastal_final_split.bam; samtools index sf_2_lastal_final_split.bam ; samtools depth sf_2_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tsf_2\t"$0}' >> depth
+maf-convert sam tsu_0_lastal_final_split.maf > tsu_0_lastal_final_split.sam ; sed -i 's/query.//g' tsu_0_lastal_final_split.sam; sed -i 's/col.//g' tsu_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa tsu_0_lastal_final_split.sam | samtools sort - > tsu_0_lastal_final_split.bam; samtools index tsu_0_lastal_final_split.bam ; samtools depth tsu_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\ttsu_0\t"$0}' >> depth
+maf-convert sam wil_2_lastal_final_split.maf > wil_2_lastal_final_split.sam ; sed -i 's/query.//g' wil_2_lastal_final_split.sam; sed -i 's/col.//g' wil_2_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa wil_2_lastal_final_split.sam | samtools sort - > wil_2_lastal_final_split.bam; samtools index wil_2_lastal_final_split.bam ; samtools depth wil_2_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\twil_2\t"$0}' >> depth
+maf-convert sam ws_0_lastal_final_split.maf > ws_0_lastal_final_split.sam ; sed -i 's/query.//g' ws_0_lastal_final_split.sam; sed -i 's/col.//g' ws_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa ws_0_lastal_final_split.sam | samtools sort - > ws_0_lastal_final_split.bam; samtools index ws_0_lastal_final_split.bam ; samtools depth ws_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tws_0\t"$0}' >> depth
+maf-convert sam wu_0_lastal_final_split.maf > wu_0_lastal_final_split.sam ; sed -i 's/query.//g' wu_0_lastal_final_split.sam; sed -i 's/col.//g' wu_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa wu_0_lastal_final_split.sam | samtools sort - > wu_0_lastal_final_split.bam; samtools index wu_0_lastal_final_split.bam ; samtools depth wu_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\twu_0\t"$0}' >> depth
+maf-convert sam zu_0_lastal_final_split.maf > zu_0_lastal_final_split.sam ; sed -i 's/query.//g' zu_0_lastal_final_split.sam; sed -i 's/col.//g' zu_0_lastal_final_split.sam; samtools view -O BAM --reference tair10.fa zu_0_lastal_final_split.sam | samtools sort - > zu_0_lastal_final_split.bam; samtools index zu_0_lastal_final_split.bam ; samtools depth zu_0_lastal_final_split.bam | wc -l | awk '{print "LAST\tLAST+one-to-one\tzu_0\t"$0}' >> depth
+
+
+
+
+maf-convert sam bur_0_gsalign_temp.maf > bur_0_gsalign.sam ; sed -i 's/query.//g' bur_0_gsalign.sam; sed -i 's/col.//g' bur_0_gsalign.sam; samtools view -O BAM --reference tair10.fa bur_0_gsalign.sam | samtools sort - > bur_0_gsalign.bam; samtools index bur_0_gsalign.bam ; samtools depth bur_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tbur_0\t"$0}' >> depth
+maf-convert sam can_0_gsalign_temp.maf > can_0_gsalign.sam ; sed -i 's/query.//g' can_0_gsalign.sam; sed -i 's/col.//g' can_0_gsalign.sam; samtools view -O BAM --reference tair10.fa can_0_gsalign.sam | samtools sort - > can_0_gsalign.bam; samtools index can_0_gsalign.bam ; samtools depth can_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tcan_0\t"$0}' >> depth
+maf-convert sam ct_1_gsalign_temp.maf > ct_1_gsalign.sam ; sed -i 's/query.//g' ct_1_gsalign.sam; sed -i 's/col.//g' ct_1_gsalign.sam; samtools view -O BAM --reference tair10.fa ct_1_gsalign.sam | samtools sort - > ct_1_gsalign.bam; samtools index ct_1_gsalign.bam ; samtools depth ct_1_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tct_1\t"$0}' >> depth
+maf-convert sam edi_0_gsalign_temp.maf > edi_0_gsalign.sam ; sed -i 's/query.//g' edi_0_gsalign.sam; sed -i 's/col.//g' edi_0_gsalign.sam; samtools view -O BAM --reference tair10.fa edi_0_gsalign.sam | samtools sort - > edi_0_gsalign.bam; samtools index edi_0_gsalign.bam ; samtools depth edi_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tedi_0\t"$0}' >> depth
+maf-convert sam hi_0_gsalign_temp.maf > hi_0_gsalign.sam ; sed -i 's/query.//g' hi_0_gsalign.sam; sed -i 's/col.//g' hi_0_gsalign.sam; samtools view -O BAM --reference tair10.fa hi_0_gsalign.sam | samtools sort - > hi_0_gsalign.bam; samtools index hi_0_gsalign.bam ; samtools depth hi_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\thi_0\t"$0}' >> depth
+maf-convert sam kn_0_gsalign_temp.maf > kn_0_gsalign.sam ; sed -i 's/query.//g' kn_0_gsalign.sam; sed -i 's/col.//g' kn_0_gsalign.sam; samtools view -O BAM --reference tair10.fa kn_0_gsalign.sam | samtools sort - > kn_0_gsalign.bam; samtools index kn_0_gsalign.bam ; samtools depth kn_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tkn_0\t"$0}' >> depth
+maf-convert sam ler_0_gsalign_temp.maf > ler_0_gsalign.sam ; sed -i 's/query.//g' ler_0_gsalign.sam; sed -i 's/col.//g' ler_0_gsalign.sam; samtools view -O BAM --reference tair10.fa ler_0_gsalign.sam | samtools sort - > ler_0_gsalign.bam; samtools index ler_0_gsalign.bam ; samtools depth ler_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tler_0\t"$0}' >> depth
+maf-convert sam mt_0_gsalign_temp.maf > mt_0_gsalign.sam ; sed -i 's/query.//g' mt_0_gsalign.sam; sed -i 's/col.//g' mt_0_gsalign.sam; samtools view -O BAM --reference tair10.fa mt_0_gsalign.sam | samtools sort - > mt_0_gsalign.bam; samtools index mt_0_gsalign.bam ; samtools depth mt_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tmt_0\t"$0}' >> depth
+maf-convert sam no_0_gsalign_temp.maf > no_0_gsalign.sam ; sed -i 's/query.//g' no_0_gsalign.sam; sed -i 's/col.//g' no_0_gsalign.sam; samtools view -O BAM --reference tair10.fa no_0_gsalign.sam | samtools sort - > no_0_gsalign.bam; samtools index no_0_gsalign.bam ; samtools depth no_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tno_0\t"$0}' >> depth
+maf-convert sam oy_0_gsalign_temp.maf > oy_0_gsalign.sam ; sed -i 's/query.//g' oy_0_gsalign.sam; sed -i 's/col.//g' oy_0_gsalign.sam; samtools view -O BAM --reference tair10.fa oy_0_gsalign.sam | samtools sort - > oy_0_gsalign.bam; samtools index oy_0_gsalign.bam ; samtools depth oy_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\toy_0\t"$0}' >> depth
+maf-convert sam po_0_gsalign_temp.maf > po_0_gsalign.sam ; sed -i 's/query.//g' po_0_gsalign.sam; sed -i 's/col.//g' po_0_gsalign.sam; samtools view -O BAM --reference tair10.fa po_0_gsalign.sam | samtools sort - > po_0_gsalign.bam; samtools index po_0_gsalign.bam ; samtools depth po_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tpo_0\t"$0}' >> depth
+maf-convert sam rsch_4_gsalign_temp.maf > rsch_4_gsalign.sam ; sed -i 's/query.//g' rsch_4_gsalign.sam; sed -i 's/col.//g' rsch_4_gsalign.sam; samtools view -O BAM --reference tair10.fa rsch_4_gsalign.sam | samtools sort - > rsch_4_gsalign.bam; samtools index rsch_4_gsalign.bam ; samtools depth rsch_4_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\trsch_4\t"$0}' >> depth
+maf-convert sam sf_2_gsalign_temp.maf > sf_2_gsalign.sam ; sed -i 's/query.//g' sf_2_gsalign.sam; sed -i 's/col.//g' sf_2_gsalign.sam; samtools view -O BAM --reference tair10.fa sf_2_gsalign.sam | samtools sort - > sf_2_gsalign.bam; samtools index sf_2_gsalign.bam ; samtools depth sf_2_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tsf_2\t"$0}' >> depth
+maf-convert sam tsu_0_gsalign_temp.maf > tsu_0_gsalign.sam ; sed -i 's/query.//g' tsu_0_gsalign.sam; sed -i 's/col.//g' tsu_0_gsalign.sam; samtools view -O BAM --reference tair10.fa tsu_0_gsalign.sam | samtools sort - > tsu_0_gsalign.bam; samtools index tsu_0_gsalign.bam ; samtools depth tsu_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\ttsu_0\t"$0}' >> depth
+maf-convert sam wil_2_gsalign_temp.maf > wil_2_gsalign.sam ; sed -i 's/query.//g' wil_2_gsalign.sam; sed -i 's/col.//g' wil_2_gsalign.sam; samtools view -O BAM --reference tair10.fa wil_2_gsalign.sam | samtools sort - > wil_2_gsalign.bam; samtools index wil_2_gsalign.bam ; samtools depth wil_2_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\twil_2\t"$0}' >> depth
+maf-convert sam ws_0_gsalign_temp.maf > ws_0_gsalign.sam ; sed -i 's/query.//g' ws_0_gsalign.sam; sed -i 's/col.//g' ws_0_gsalign.sam; samtools view -O BAM --reference tair10.fa ws_0_gsalign.sam | samtools sort - > ws_0_gsalign.bam; samtools index ws_0_gsalign.bam ; samtools depth ws_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tws_0\t"$0}' >> depth
+maf-convert sam wu_0_gsalign_temp.maf > wu_0_gsalign.sam ; sed -i 's/query.//g' wu_0_gsalign.sam; sed -i 's/col.//g' wu_0_gsalign.sam; samtools view -O BAM --reference tair10.fa wu_0_gsalign.sam | samtools sort - > wu_0_gsalign.bam; samtools index wu_0_gsalign.bam ; samtools depth wu_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\twu_0\t"$0}' >> depth
+maf-convert sam zu_0_gsalign_temp.maf > zu_0_gsalign.sam ; sed -i 's/query.//g' zu_0_gsalign.sam; sed -i 's/col.//g' zu_0_gsalign.sam; samtools view -O BAM --reference tair10.fa zu_0_gsalign.sam | samtools sort - > zu_0_gsalign.bam; samtools index zu_0_gsalign.bam ; samtools depth zu_0_gsalign.bam | wc -l | awk '{print "GSAlign\tGSAlign\tzu_0\t"$0}' >> depth
+
+```
+
+
+
+
+
+
+Plot the results
+```{r warning=FALSE, fig.height = 8, fig.width = 12}
+
+library(ggplot2)
+dat = read.table("summaryTable")
+print(dat)
+dat$V2 <- factor(dat$V2, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20", "LAST+one-to-one",  "MUMmer4", "GSAlign"))
+dat$V1 <- factor(dat$V1, levels = c("AnchorWave", "minimap2", "LAST", "MUMmer4", "GSAlign"))
+
+shape = c(16, 17, 17, 17, 7, 3, 15)
+color=c("#FB766D", "#CD9600","#7CAE00","#00BE67","#22C6CA", "#D4A2FA","#FF61CC")
+
+
+p =ggplot(data=dat, aes(x=V3, y=V6, color=V2, shape=V2)) + geom_point(size=3)+
+scale_shape_manual(values=shape)+
+  scale_color_manual(values=color)+
+  theme_grey(base_size = 24) +
+  labs(x="", y="Variant sites F-Score") +
+  theme(axis.line = element_blank(),
+  		legend.title = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        axis.text.y = element_text( colour = "black"),
+        axis.ticks.y=element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+print(p)
+
+png(file="ds_fscore.png",width = 960, height = 416)
+p
+dev.off()
+pdf(file="ds_fscore.pdf", width = 12, height = 5.2)
+p
+dev.off()
+
+d1 = dat[which(dat$V2 == "AnchorWave"),]
+d5 = dat[which(dat$V2 == "minimap2_asm5"),]
+d10 = dat[which(dat$V2 == "minimap2_asm10"),]
+d20 = dat[which(dat$V2 == "minimap2_asm20"),]
+summary(d1$V6)
+summary(d5$V6)
+summary(d10$V6)
+summary(d20$V6)
+
+
+p =ggplot(data=dat, aes(x=V3, y=V4, color=V2, shape=V2)) + geom_point(size=3)+
+scale_shape_manual(values=shape)+
+  scale_color_manual(values=color)+
+  theme_grey(base_size = 24) +
+  labs(x="", y="Variant sites recall") +
+  theme(axis.line = element_blank(),
+  		legend.title = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        axis.text.y = element_text( colour = "black"),
+        axis.ticks.y=element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+print(p)
+
+png(file="ds_recall.png",width = 960, height = 416)
+p
+dev.off()
+pdf(file="ds_recall.pdf", width = 12, height = 5.2)
+p
+dev.off()
+summary(d1$V4)
+summary(d5$V4)
+summary(d10$V4)
+summary(d20$V4)
+
+
+
+p =ggplot(data=dat, aes(x=V3, y=V5, color=V2, shape=V2)) + geom_point(size=3)+
+scale_shape_manual(values=shape)+
+  scale_color_manual(values=color)+
+  theme_grey(base_size = 24) +
+  labs(x="", y="Variant sites precision") +
+  theme(axis.line = element_blank(),
+  		legend.title = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        axis.text.y = element_text( colour = "black"),
+        axis.ticks.y=element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+print(p)
+
+png(file="ds_precision.png",width = 960, height = 416)
+p
+dev.off()
+pdf(file="ds_precision.pdf", width = 12, height = 5.2)
+p
+dev.off()
+summary(d1$V5)
+summary(d5$V5)
+summary(d10$V5)
+summary(d20$V5)
+
+
+
+
+newd = data.frame(approach=c(as.character(dat$V2), as.character(dat$V2), as.character(dat$V2)), score=c(rep("F-score", nrow(dat)), rep("recall", nrow(dat)), rep("precision", nrow(dat))), number=c(dat$V6, dat$V4, dat$V5) )
+newd$approach = factor(newd$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20", "LAST+one-to-one",  "MUMmer4", "GSAlign"))
+
+newd$score = factor(newd$score, levels = c("F-score", "precision", "recall"))
+
+p = ggplot(newd, aes(x=approach, y=number, fill=score, color=score)) +geom_boxplot(width=.6) + theme_grey(base_size = 24) + ylim(0, 1)+
+  labs(x="Test on Arabidopsis genome alignment", y="") + 
+  theme(axis.line = element_blank(),
+  		legend.title = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        axis.text.y = element_text( colour = "black"),
+        axis.ticks.y=element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+print(p)
+
+png(file="ara_summary.png", width = 640, height = 416)
+p
+dev.off()
+pdf(file="ara_summary.pdf", width = 8, height = 5.2)
+p
+dev.off()
+
+
+
+
+dat = read.table("allSummaryTable")
+print(dat)
+dat$V2 <- factor(dat$V2, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST+one-to-one",  "MUMmer4", "GSAlign"))
+dat$V1 <- factor(dat$V1, levels = c("AnchorWave", "minimap2", "LAST", "MUMmer4", "GSAlign"))
+
+shape = c(16, 17, 17, 17, 7, 7, 3, 15)
+color=c("#FB766D", "#CD9600","#7CAE00","#00BE67","#22C6CA","#0AFA0A","#D4A2FA","#FF61CC")
+
+
+p =ggplot(data=dat, aes(x=V3, y=V6, color=V2, shape=V2)) + geom_point(size=3)+
+scale_shape_manual(values=shape)+
+  scale_color_manual(values=color)+
+  theme_grey(base_size = 24) +
+  labs(x="", y="Genome wide F-Score") +
+  theme(axis.line = element_blank(),
+  		legend.title = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        axis.text.y = element_text( colour = "black"),
+        axis.ticks.y=element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+print(p)
+
+png(file="all_fscore.png",width = 960, height = 416)
+p
+dev.off()
+pdf(file="all_fscore.pdf", width = 12, height = 5.2)
+p
+dev.off()
+
+d1 = dat[which(dat$V2 == "AnchorWave"),]
+d5 = dat[which(dat$V2 == "minimap2_asm5"),]
+d10 = dat[which(dat$V2 == "minimap2_asm10"),]
+d20 = dat[which(dat$V2 == "minimap2_asm20"),]
+summary(d1$V6)
+summary(d5$V6)
+summary(d10$V6)
+summary(d20$V6)
+
+
+p =ggplot(data=dat, aes(x=V3, y=V4, color=V2, shape=V2)) + geom_point(size=3)+
+scale_shape_manual(values=shape)+
+  scale_color_manual(values=color)+
+  theme_grey(base_size = 24) +
+  labs(x="", y="Genome wide recall") +
+  theme(axis.line = element_blank(),
+  		legend.title = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        axis.text.y = element_text( colour = "black"),
+        axis.ticks.y=element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+print(p)
+
+png(file="all_recall.png",width = 960, height = 416)
+p
+dev.off()
+pdf(file="all_recall.pdf", width = 12, height = 5.2)
+p
+dev.off()
+summary(d1$V4)
+summary(d5$V4)
+summary(d10$V4)
+summary(d20$V4)
+
+
+
+p =ggplot(data=dat, aes(x=V3, y=V5, color=V2, shape=V2)) + geom_point(size=3, alpha=0.4)+
+scale_shape_manual(values=shape)+
+  scale_color_manual(values=color)+
+  theme_grey(base_size = 24) +
+  labs(x="", y="Genome wide precision") +
+  theme(axis.line = element_blank(),
+  		legend.title = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        axis.text.y = element_text( colour = "black"),
+        axis.ticks.y=element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+print(p)
+
+png(file="all_precision.png",width = 960, height = 416)
+p
+dev.off()
+pdf(file="all_precision.pdf", width = 12, height = 5.2)
+p
+dev.off()
+summary(d1$V5)
+summary(d5$V5)
+summary(d10$V5)
+summary(d20$V5)
+
+
+
+
+
+
+
+
+
+faidx = read.table("tair10.fa.fai")
+genome_size = sum(faidx$V2)
+dat = read.table("depth")
+print(dat)
+dat$V2 <- factor(dat$V2, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST+one-to-one",  "MUMmer4", "GSAlign"))
+dat$V1 <- factor(dat$V1, levels = c("AnchorWave", "minimap2", "LAST", "MUMmer4", "GSAlign"))
+
+
+p =ggplot(data=dat, aes(x=V3, y=V4/genome_size, color=V2, shape=V2)) + geom_point(size=3) + 
+scale_shape_manual(values=shape)+
+  scale_color_manual(values=color)+
+  theme_grey(base_size = 24) +
+  labs(x="", y="Proportion of aligned sites") +
+  theme(axis.line = element_blank(),
+  		legend.title = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        axis.text.y = element_text( colour = "black"),
+        axis.ticks.y=element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+print(p)
+png(file="aligned_sites.png",width = 960, height = 416)
+p
+dev.off()
+pdf(file="aligned_sites.pdf", width = 12, height = 5.2)
+p
+dev.off()
+
+d1 = dat[which(dat$V2 == "AnchorWave"),]
+d5 = dat[which(dat$V2 == "minimap2_asm5"),]
+d10 = dat[which(dat$V2 == "minimap2_asm10"),]
+d20 = dat[which(dat$V2 == "minimap2_asm20"),]
+summary(d1$V4)
+summary(d5$V4)
+summary(d10$V4)
+summary(d20$V4)
+
+```
+
+
+something for the purpose of creating the IGV screen in the supplementary materials
+```
+cp bur_0_lastal_final_split.bam bur_0_lastal_one-to-one.bam
+samtools index bur_0_lastal_one-to-one.bam
+cp minimap2_bur_0.bam minimap2_asm10_bur_0.bam
+samtools index minimap2_asm10_bur_0.bam
+
+maf-convert sam col_bur.maf | sed 's/query.//g' | sed 's/col.//g' | samtools view -O BAM --reference tair10.fa - | samtools sort - > bur_0_benchmark.bam; samtools index bur_0_benchmark.bam
+
+
+```

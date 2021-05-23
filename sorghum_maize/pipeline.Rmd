@@ -1,0 +1,921 @@
+---
+title: ""
+author: "Baoxing Song"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+## get all the total TFBS size 
+
+
+Download the maize B73 V4 data and sorghum genome file
+```
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/gff3/zea_mays/Zea_mays.AGPv4.34.gff3.gz
+gunzip Zea_mays.AGPv4.34.gff3.gz
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/fasta/zea_mays/dna/Zea_mays.AGPv4.dna.toplevel.fa.gz
+gunzip Zea_mays.AGPv4.dna.toplevel.fa.gz
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-49/fasta/sorghum_bicolor/dna/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.gz
+gunzip Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.gz
+```
+
+Using AnchorWave to extract full-length CDS. \
+NOTE: please do NOT use CDS extracted using other software and do NOT use the output full-length CDS file for other purpose. Since AnchorWave filtered some CDS records to minimum the impact of minimap2 limitation on genome alignment that "Minimap2 often misses small exons" (https://github.com/lh3/minimap2#limitations)
+```
+anchorwave gff2seq -r Zea_mays.AGPv4.dna.toplevel.fa -i Zea_mays.AGPv4.34.gff3 -o cds.fa
+```
+
+
+use minimap2 (https://github.com/lh3/minimap2) to map the extracted sequence to the reference genome sequence and synthesis genomes
+```
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa cds.fa > cds.sam
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Zea_mays.AGPv4.dna.toplevel.fa  cds.fa > ref.sam
+```
+
+prepare genome annotation files \
+all_reproducible_peaks_summits_merged.bed has been published at https://www.nature.com/articles/s41467-020-18832-8 \
+
+```
+wget https://github.com/mcstitzer/maize_TEs/raw/master/B73.structuralTEv2.disjoined.2018-09-19.gff3.gz
+gunzip B73.structuralTEv2.disjoined.2018-09-19.gff3.gz
+grep -v "#" B73.structuralTEv2.disjoined.2018-09-19.gff3 | awk '{print $1"\t"$4-1"\t"$5}'  | bedtools sort | bedtools merge  > B73.structuralTEv2.disjoined.2018-09-19.bed
+
+grep "biotype=protein_coding" Zea_mays.AGPv4.34.gff3 | grep -e "\sgene\s" | awk '{print $1"\t"$4-1"\t"$5}' | bedtools merge > Zea_mays.AGPv4.34_coding_gene.bed
+#total length of geneitc region 
+cat Zea_mays.AGPv4.34_coding_gene.bed | awk -F'\t' 'BEGIN{SUM=0}{ SUM+=$3-$2 }END{print SUM}' # 162494287
+grep "\sCDS\s" Zea_mays.AGPv4.34.gff3 |  awk '{print $1"\t"$4-1"\t"$5}' | bedtools sort |  bedtools merge  > Zea_mays.AGPv4.34_CDS.bed
+bedtools subtract  -a Zea_mays.AGPv4.34_coding_gene.bed -b Zea_mays.AGPv4.34_CDS.bed | bedtools sort | bedtools merge  > Zea_mays.AGPv4.34_coding_gene_nonCDS.bed
+
+```
+
+
+
+
+perform genome alignment using minimap2 and summarize the result
+``` (checked)
+/usr/bin/time minimap2 -x asm5 -t 1 -a Zea_mays.AGPv4.dna.toplevel.fa Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa > minimap2_sorghum_5.sam 2> minimap2_asm5.log
+/usr/bin/time minimap2 -x asm10 -t 1 -a Zea_mays.AGPv4.dna.toplevel.fa Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa > minimap2_sorghum_10.sam 2> minimap2_asm10.log
+/usr/bin/time minimap2 -x asm20 -t 1 -a Zea_mays.AGPv4.dna.toplevel.fa Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa > minimap2_sorghum_20.sam 2> minimap2_asm20.log
+
+samtools sort minimap2_sorghum_5.sam > minimap2_sorghum_5.bam
+samtools sort minimap2_sorghum_10.sam > minimap2_sorghum_10.bam
+samtools sort minimap2_sorghum_20.sam > minimap2_sorghum_20.bam
+
+
+samtools depth minimap2_sorghum_5.bam | wc -l #2503314
+samtools depth minimap2_sorghum_5.bam -b all_reproducible_peaks_summits_merged.bed | wc -l # 457652
+samtools depth minimap2_sorghum_5.bam | awk '$3>0{print $0}' | wc -l #2489881
+samtools depth minimap2_sorghum_5.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l #456029
+samtools depth minimap2_sorghum_5.bam -b Zea_mays.AGPv4.34_coding_gene.bed | wc -l # 2332093
+samtools depth minimap2_sorghum_5.bam -b Zea_mays.AGPv4.34_coding_gene.bed | awk '$3>0{print $0}' | wc -l # 2320162
+samtools depth minimap2_sorghum_5.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l # 353993
+samtools depth minimap2_sorghum_5.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l  # 348042
+
+
+samtools depth minimap2_sorghum_10.bam | wc -l # 18445054
+samtools depth minimap2_sorghum_10.bam -b all_reproducible_peaks_summits_merged.bed | wc -l # 3401133
+samtools depth minimap2_sorghum_10.bam | awk '$3>0{print $0}' | wc -l # 17913090
+samtools depth minimap2_sorghum_10.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l #3347285
+samtools depth minimap2_sorghum_10.bam -b Zea_mays.AGPv4.34_coding_gene.bed | wc -l # 17619682
+samtools depth minimap2_sorghum_10.bam -b Zea_mays.AGPv4.34_coding_gene.bed | awk '$3>0{print $0}' | wc -l # 17118348
+samtools depth minimap2_sorghum_10.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l # 2354836
+samtools depth minimap2_sorghum_10.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l  # 2259444
+
+
+
+samtools depth minimap2_sorghum_20.bam | wc -l # 52224881
+samtools depth minimap2_sorghum_20.bam -b all_reproducible_peaks_summits_merged.bed | wc -l   #11113820
+samtools depth minimap2_sorghum_20.bam | awk '$3>0{print $0}' | wc -l # 49024035
+samtools depth minimap2_sorghum_20.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l # 10680401
+samtools depth minimap2_sorghum_20.bam -b Zea_mays.AGPv4.34_coding_gene.bed | wc -l # 47118588
+samtools depth minimap2_sorghum_20.bam -b Zea_mays.AGPv4.34_coding_gene.bed | awk '$3>0{print $0}' | wc -l # 44182530
+samtools depth minimap2_sorghum_20.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l # 7728976
+samtools depth minimap2_sorghum_20.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l  # 7132545
+```
+
+perform genome alignment using LAST(http://last.cbrc.jp/) and summarize the result
+```
+/usr/bin/time sh ./lastalPipeline.sh >last.log 2>&1
+
+
+
+python2 maf-convert sam sorghum_lastal.maf > sorghum_lastal.sam
+sed -i 's/[0-9]\+H//g' sorghum_lastal.sam
+samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal.sam | samtools sort - > sorghum_lastal.bam; samtools index sorghum_lastal.bam  # this is the many-to-many alignment
+
+
+samtools depth sorghum_lastal.bam | wc -l # 597884081
+samtools depth sorghum_lastal.bam | awk '$3>0{print $0}' | wc -l # 594220046
+
+
+
+samtools depth sorghum_lastal.bam -b all_reproducible_peaks_summits_merged.bed | wc -l # 33554729
+samtools depth sorghum_lastal.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l # 32598984
+samtools depth sorghum_lastal.bam -b Zea_mays.AGPv4.34_coding_gene.bed | wc -l # 118438260
+samtools depth sorghum_lastal.bam -b Zea_mays.AGPv4.34_coding_gene.bed | awk '$3>0{print $0}' | wc -l # 116732768
+samtools depth sorghum_lastal.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l # 365399859
+samtools depth sorghum_lastal.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l  # 364395540
+
+
+
+python2 maf-convert sam sorghum_lastal_final.maf > sorghum_lastal_final.sam # this many to one
+sed -i 's/query.//g' sorghum_lastal_final.sam
+sed -i 's/col.//g' sorghum_lastal_final.sam
+sed -i 's/[0-9]\+H//g' sorghum_lastal_final.sam
+samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal_final.sam | samtools sort - > sorghum_lastal_final.bam; samtools index sorghum_lastal_final.bam
+samtools depth sorghum_lastal_final.bam | wc -l  # 547513366
+samtools depth sorghum_lastal_final.bam -b all_reproducible_peaks_summits_merged.bed | wc -l # 32593361
+samtools depth sorghum_lastal_final.bam | awk '$3>0{print $0}' | wc -l  # 541455727
+samtools depth sorghum_lastal_final.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l  #  31471791
+samtools depth sorghum_lastal_final.bam -b Zea_mays.AGPv4.34_coding_gene.bed | wc -l # 113229899
+samtools depth sorghum_lastal_final.bam -b Zea_mays.AGPv4.34_coding_gene.bed | awk '$3>0{print $0}' | wc -l # 110793737
+samtools depth sorghum_lastal_final.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l # 337208689
+samtools depth sorghum_lastal_final.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l  # 335012548
+
+
+
+python2 maf-convert sam sorghum_lastal_final_split_swap_split_Comparator.maf > sorghum_lastal_final_split_swap_split_Comparator.sam  # one-to-one
+sed -i 's/query.//g' sorghum_lastal_final_split_swap_split_Comparator.sam
+sed -i 's/col.//g' sorghum_lastal_final_split_swap_split_Comparator.sam
+sed -i 's/[0-9]\+H//g' sorghum_lastal_final_split_swap_split_Comparator.sam
+samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal_final_split_swap_split_Comparator.sam | samtools sort - > sorghum_lastal_final_split_swap_split_Comparator.bam; samtools index sorghum_lastal_final_split_swap_split_Comparator.bam
+
+samtools depth sorghum_lastal_final_split_swap_split_Comparator.bam | wc -l # 129898533
+samtools depth sorghum_lastal_final_split_swap_split_Comparator.bam -b all_reproducible_peaks_summits_merged.bed | wc -l # 23170062
+samtools depth sorghum_lastal_final_split_swap_split_Comparator.bam | awk '$3>0{print $0}' | wc -l # 127859061
+samtools depth sorghum_lastal_final_split_swap_split_Comparator.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l  # 22483132
+samtools depth sorghum_lastal_final_split_swap_split_Comparator.bam -b Zea_mays.AGPv4.34_coding_gene.bed | wc -l # 62730883
+samtools depth sorghum_lastal_final_split_swap_split_Comparator.bam -b Zea_mays.AGPv4.34_coding_gene.bed | awk '$3>0{print $0}' | wc -l # 61595170
+samtools depth sorghum_lastal_final_split_swap_split_Comparator.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l #  46540254
+samtools depth sorghum_lastal_final_split_swap_split_Comparator.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l  # 46169395
+
+```
+
+perform genome alignment using AnchorWave and summarize the result
+```
+/usr/bin/time ./code/anchorwave proali -i Zea_mays.AGPv4.34.gff3 -as cds.fa -r Zea_mays.AGPv4.dna.toplevel.fa -a cds.sam -ar ref.sam -s Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa -n anchorwave.anchors -R 1 -Q 2 -o anchorwave.maf -f anchorwave.f.maf -w 38000 -fa3 200000 -B -4 -O1 -4 -E1 -2 -O2 -80 -E2 -1 -t 1 >anchorwave.log 2>&1
+
+
+maf-convert sam anchorwave.maf | sed 's/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.//g' | sed 's/Zea_mays.AGPv4.dna.toplevel.fa.//g' | samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa - | samtools sort - > anchorwave.bam
+samtools mpileup anchorwave.bam | wc -l   # 1870770572
+samtools depth anchorwave.bam -b all_reproducible_peaks_summits_merged.bed | wc -l  # 57164808
+samtools depth anchorwave.bam | awk '$3>0{print $0}' | wc -l  # 125848664
+samtools depth anchorwave.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l    # 34133000
+samtools depth anchorwave.bam -b Zea_mays.AGPv4.34_coding_gene.bed | wc -l # 150034551
+samtools depth anchorwave.bam -b Zea_mays.AGPv4.34_coding_gene.bed | awk '$3>0{print $0}' | wc -l #68301524
+samtools depth anchorwave.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l # 1308576282
+samtools depth anchorwave.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l  # 27551272
+```
+
+
+perform genome alignment using MUMmer4 vRC1 (https://mummer4.github.io/) and summarize the result
+``` 
+ 
+#/usr/bin/time /home/bs674/software/bin/nucmer -t 60 --sam-short=mumer.maize.short.sam Zea_mays.AGPv4.dna.toplevel.fa Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa > nucmer.log 2>&1
+ 
+#/usr/bin/time /home/bs674/software/bin/nucmer -t 69 --sam-long=mumer.maize.long.sam Zea_mays.AGPv4.dna.toplevel.fa Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa > nucmer.long.log 2>&1
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=mumer.maize.short.sam Zea_mays.AGPv4.dna.toplevel.fa Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa > nucmer.log 2>&1
+cat mumer.maize.short.sam | grep -v "@" | samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa - | samtools sort - > mumer.maize.short.bam
+samtools index mumer.maize.short.bam
+samtools depth mumer.maize.short.bam | wc -l   # 70953295
+samtools depth mumer.maize.short.bam | awk '$3>0{print $0}' | wc -l  #69514918
+samtools depth mumer.maize.short.bam -b all_reproducible_peaks_summits_merged.bed | wc -l # 16073863
+samtools depth mumer.maize.short.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l # 15687267
+samtools depth mumer.maize.short.bam -b Zea_mays.AGPv4.34_coding_gene.bed | wc -l # 61402015
+samtools depth mumer.maize.short.bam -b Zea_mays.AGPv4.34_coding_gene.bed | awk '$3>0{print $0}' | wc -l # 60194318
+samtools depth mumer.maize.short.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l # 10169800
+samtools depth mumer.maize.short.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l  # 9987182
+
+```
+
+perform genome alignment using GSAlign(https://github.com/hsinnan75/GSAlign) and summarize the result
+``` (checked)
+/usr/bin/time /home/bs674/software/GSAlign-1.0.22/bin/GSAlign -r Zea_mays.AGPv4.dna.toplevel.fa -q Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa -t 1 -o sorghum_gsalign -fmt 1 > GSAlign.log 2>&1
+maf-convert sam sorghum_gsalign.maf | sed 's/qry.//g' | sed 's/ref.//g' | samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa - | samtools sort - > sorghum_gsalign.bam
+samtools index sorghum_gsalign.bam
+samtools depth sorghum_gsalign.bam -b all_reproducible_peaks_summits_merged.bed | wc -l # 5341494
+samtools depth sorghum_gsalign.bam | wc -l  # 23870692
+samtools depth sorghum_gsalign.bam | awk '$3>0{print $0}' | wc -l # 23114133
+samtools depth sorghum_gsalign.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l  # 5138842
+samtools depth sorghum_gsalign.bam -b Zea_mays.AGPv4.34_coding_gene.bed | wc -l #  21659744
+samtools depth sorghum_gsalign.bam -b Zea_mays.AGPv4.34_coding_gene.bed | awk '$3>0{print $0}' | wc -l #21015569
+samtools depth sorghum_gsalign.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l # 3322894
+samtools depth sorghum_gsalign.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l  # 3214544
+
+```
+
+
+
+
+
+
+<!-- python2 maf-convert sam sorghum_lastal.maf > sorghum_lastal.sam -->
+<!-- sed -i 's/[0-9]\+H//g' sorghum_lastal.sam -->
+<!-- samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal.sam | samtools sort - > sorghum_lastal.bam; samtools index sorghum_lastal.bam -->
+
+
+
+<!-- python2 maf-convert sam sorghum_lastal_split_swap_split_Comparator.maf > sorghum_lastal_split_swap_split_Comparator.sam -->
+<!-- sed -i 's/[0-9]\+H//g' sorghum_lastal_split_swap_split_Comparator.sam -->
+<!-- samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal_split_swap_split_Comparator.sam | samtools sort - > sorghum_lastal_split_swap_split_Comparator.bam; samtools index sorghum_lastal_split_swap_split_Comparator.bam -->
+<!-- samtools mpileup sorghum_lastal_split_swap_split_Comparator.bam > sorghum_lastal_split_swap_split_Comparator.bam.mpileup -->
+
+
+<!-- python2 maf-convert sam sorghum_lastal_split_Comparator.maf > sorghum_lastal_split_Comparator.sam -->
+<!-- sed -i 's/[0-9]\+H//g' sorghum_lastal_split_Comparator.sam -->
+<!-- samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal_split_Comparator.sam | samtools sort - > sorghum_lastal_split_Comparator.bam; samtools index sorghum_lastal_split_Comparator.bam -->
+<!-- samtools mpileup sorghum_lastal_split_Comparator.bam > sorghum_lastal_split_Comparator.bam.mpileup -->
+
+
+<!-- python2 maf-convert sam sorghum_lastal_final_split_swap_split_Comparator.maf > sorghum_lastal_final_split_swap_split_Comparator.sam -->
+<!-- sed -i 's/query.//g' sorghum_lastal_final_split_swap_split_Comparator.sam -->
+<!-- sed -i 's/col.//g' sorghum_lastal_final_split_swap_split_Comparator.sam -->
+<!-- sed -i 's/[0-9]\+H//g' sorghum_lastal_final_split_swap_split_Comparator.sam -->
+<!-- samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal_final_split_swap_split_Comparator.sam | samtools sort - > sorghum_lastal_final_split_swap_split_Comparator.bam; samtools index sorghum_lastal_final_split_swap_split_Comparator.bam -->
+<!-- samtools mpileup sorghum_lastal_final_split_swap_split_Comparator.bam > sorghum_lastal_final_split_swap_split_Comparator.bam.mpileup -->
+
+
+
+<!-- python2 maf-convert sam sorghum_lastal_final_split_Comparator.maf > sorghum_lastal_final_split_Comparator.sam -->
+<!-- sed -i 's/query.//g' sorghum_lastal_final_split_Comparator.sam -->
+<!-- sed -i 's/col.//g' sorghum_lastal_final_split_Comparator.sam -->
+<!-- sed -i 's/[0-9]\+H//g' sorghum_lastal_final_split_Comparator.sam -->
+<!-- samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal_final_split_Comparator.sam | samtools sort - > sorghum_lastal_final_split_Comparator.bam; samtools index sorghum_lastal_final_split_Comparator.bam -->
+<!-- samtools mpileup sorghum_lastal_final_split_Comparator.bam > sorghum_lastal_final_split_Comparator.bam.mpileup -->
+
+<!-- python2 maf-convert sam sorghum_lastal_final.maf > sorghum_lastal_final.sam -->
+<!-- sed -i 's/query.//g' sorghum_lastal_final.sam -->
+<!-- sed -i 's/col.//g' sorghum_lastal_final.sam -->
+<!-- sed -i 's/[0-9]\+H//g' sorghum_lastal_final.sam -->
+<!-- samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal_final.sam | samtools sort - > sorghum_lastal_final.bam; samtools index sorghum_lastal_final.bam -->
+<!-- samtools mpileup sorghum_lastal_final.bam > sorghum_lastal_final.bam.mpileup -->
+
+
+<!-- python2 maf-convert sam sorghum_lastal_split.maf > sorghum_lastal_split.sam -->
+<!-- sed -i 's/[0-9]\+H//g' sorghum_lastal_split.sam -->
+<!-- samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal_split.sam | samtools sort - > sorghum_lastal_split.bam; samtools index sorghum_lastal_split.bam -->
+<!-- samtools mpileup sorghum_lastal_split.bam > sorghum_lastal_split.bam.mpileup -->
+
+<!-- python2 maf-convert sam sorghum_lastal_split_v2.maf > sorghum_lastal_split_v2.sam -->
+<!-- sed -i 's/[0-9]\+H//g' sorghum_lastal_split_v2.sam -->
+<!-- samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal_split_v2.sam | samtools sort - > sorghum_lastal_split_v2.bam; samtools index sorghum_lastal_split_v2.bam -->
+<!-- samtools mpileup sorghum_lastal_split_v2.bam > sorghum_lastal_split_v2.bam.mpileup -->
+
+
+<!-- python2 maf-convert sam sorghum_lastal_split_v3.maf > sorghum_lastal_split_v3.sam -->
+<!-- sed -i 's/[0-9]\+H//g' sorghum_lastal_split_v3.sam -->
+<!-- samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa sorghum_lastal_split_v3.sam | samtools sort - > sorghum_lastal_split_v3.bam; samtools index sorghum_lastal_split_v3.bam -->
+<!-- samtools mpileup sorghum_lastal_split_v3.bam > sorghum_lastal_split_v3.bam.mpileup -->
+
+
+
+
+
+
+
+
+
+
+
+<!-- cat sorghum_lastal_split_swap_split_Comparator.bam.mpileup | awk '{print $4}' | sort | uniq # 1 -->
+<!-- cat sorghum_lastal_split_Comparator.bam.mpileup | awk '{print $4}' | sort | uniq # many -->
+<!-- cat sorghum_lastal_final_split_swap_split_Comparator.bam.mpileup | awk '{print $4}' | sort | uniq  #  1 -->
+<!-- cat sorghum_lastal_final_split_Comparator.bam.mpileup | awk '{print $4}' | sort | uniq  #  1 -->
+<!-- cat sorghum_lastal_final.bam.mpileup | awk '{print $4}' | sort | uniq  # 1 -->
+<!-- cat sorghum_lastal_split.bam.mpileup | awk '{print $4}' | sort | uniq  # many -->
+<!-- cat sorghum_lastal_split_v2.bam.mpileup | awk '{print $4}' | sort | uniq  #  -->
+
+
+
+
+<!-- cat sorghum_lastal.maf | last-split > sorghum_lastal_split.maf -->
+<!-- cat sorghum_lastal.maf | python2 ./maf-swap > sorghum_lastal_swap.maf -->
+<!-- cat sorghum_lastal_swap.maf | last-split | python2 ./maf-swap > sorghum_lastal_split_v2.maf -->
+
+
+<!-- cat sorghum_lastal.maf | python2 ../mo17/code/scripts/maf-swap | last-split | python2 ../mo17/code/scripts/maf-swap  > sorghum_lastal_split_v3.maf -->
+
+
+
+<!-- cat sorghum_lastal_final.maf | python2 ../mo17/code/scripts/maf-swap > sorghum_lastal_final_swap.maf -->
+<!-- python2 maf-convert sam sorghum_lastal_final_swap.maf > sorghum_lastal_final_swap.sam -->
+
+<!-- sed -i 's/query.//g' sorghum_lastal_final_swap.sam -->
+<!-- sed -i 's/col.//g' sorghum_lastal_final_swap.sam -->
+<!-- sed -i 's/[0-9]\+H//g' sorghum_lastal_final_swap.sam -->
+<!-- samtools view -O BAM --reference Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa sorghum_lastal_final_swap.sam | samtools sort - > sorghum_lastal_final_swap.bam; samtools index sorghum_lastal_final_swap.bam -->
+<!-- samtools depth sorghum_lastal_final_swap.bam | awk '$3>0{print $3}' | sort |uniq ##many -->
+
+
+
+
+<!-- cat sorghum_lastal_final_split_swap_split_Comparator.maf | python2 ./maf-swap > sorghum_lastal_final_split_swap_split_swap.maf -->
+<!-- python2 maf-convert sam sorghum_lastal_final_split_swap_split_swap.maf > sorghum_lastal_final_split_swap_split_swap.sam -->
+<!-- sed -i 's/query.//g' sorghum_lastal_final_split_swap_split_swap.sam -->
+<!-- sed -i 's/col.//g' sorghum_lastal_final_split_swap_split_swap.sam -->
+<!-- sed -i 's/[0-9]\+H//g' sorghum_lastal_final_split_swap_split_swap.sam -->
+<!-- samtools view -O BAM --reference Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa sorghum_lastal_final_split_swap_split_swap.sam | samtools sort - > sorghum_lastal_final_split_swap_split_swap.bam; samtools index sorghum_lastal_final_split_swap_split_swap.bam -->
+<!-- samtools depth sorghum_lastal_final_split_swap_split_swap.bam | awk '$3>0{print $3}' | sort |uniq  ##1 -->
+
+
+
+
+
+
+
+
+<!-- cat ref.sam | perl -e  ' while (<>) { while($_=~/(\d+[ID])/g){print "$1\n"} }' | sed  '~s/I//g' | sed  '~s/D//g' | sort -n | tail -->
+
+```{r}
+
+
+dat = read.table("all_reproducible_peaks_summits_merged.bed")
+dat$len = dat$V3-dat$V2
+sum(abs(dat$len))
+#60036753
+
+
+```
+
+
+
+## orginaze all the numbers into a file names "summaryData' manually and plot the result
+
+
+```{r warning=FALSE, fig.height = 8.5, fig.width = 11.25}
+
+TE2018 = read.table("B73.structuralTEv2.disjoined.2018-09-19.bed")
+TE2018$len = TE2018$V3-TE2018$V2
+TE2018TotalLength = sum(abs(TE2018$len)) # 1495364259
+
+library(ggplot2)
+data = read.table("summaryData", header=TRUE)
+data$recall = data$depth_covered_bed / data$bed
+
+data$non_TFBS_matches = data$depth_covered - data$depth_covered_bed
+data$non_TFBS = data$depth - data$depth_bed
+
+
+data$enrichment = (data$depth_covered_bed/data$depth_bed)/(data$non_TFBS_matches/data$non_TFBS)
+
+
+data$approach <- factor(data$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20", "LAST+many-to-many", "LAST+many-to-one", "LAST+one-to-one", "MUMmer4", "GSAlign"))
+data$software <- factor(data$software, levels = c("AnchorWave", "minimap2", "LAST", "MUMmer4", "GSAlign"))
+shape = c(16, 17, 17, 17,  15, 15, 15, 3, 7)
+
+myColors <- c("#F8766D", "#D89000", "#A3A500", "#39B600", "#00BFC4", "#00B0F6", "#9590FF", "#E76BF3", "#FF62BC")
+names(myColors) <- levels(data$approach)
+colScale <- scale_colour_manual(name = "grp",values = myColors)
+fillScale <- scale_fill_manual(name = "grp",values = myColors)
+
+print(data)
+
+p = ggplot(data=data, aes(x=recall, y=enrichment, color=approach, shape=software)) + geom_point(size=5, alpha=0.8) + 
+guides(colour = guide_legend(override.aes = list(shape = shape))) +scale_shape(guide = FALSE)+ colScale+fillScale+
+  labs(x="TFBS recall", y="Match ratio in TFBS\nalignment to match ratio\n in non-TFBS alignment", title="")+ xlim(0, 1) + ylim(0, 12) +
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+	    	  legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "TFBS_quality_control"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+
+```
+
+
+Define the "recall" as (# position-match base pairs in TFBS and coding genetic region)/(total TFBS length + coding genetic region)
+By "coding genetic region", I mean from TSS to TTS of coding genes (inlcuding introns, UTR, CDS)
+Define "precision" as (# position-match base pairs in TFBS and coding genetic region)/(# position-match base pairs in TFBS and coding genetic region + # position-match base pairs in TE region)
+
+This is not a very solid analysis. But did not find much more convincing way to do that.
+
+```{r warning=FALSE, fig.height = 8.5, fig.width = 11.25}
+
+
+data$TFBS_coding_genes_recall = (data$depth_covered_bed+data$depth_genetic_covered) / (data$bed+161046032)
+data$TFBS_coding_genes_precision = (data$depth_covered_bed+data$depth_genetic_covered)/(data$depth_covered_bed+data$depth_genetic_covered + data$X2018.09.19_covered)
+data$TFBS_coding_genes_fscore = 2*(data$TFBS_coding_genes_precision*data$TFBS_coding_genes_recall)/(data$TFBS_coding_genes_precision+data$TFBS_coding_genes_recall)
+
+p = ggplot(data=data, aes(x=approach, y=TFBS_coding_genes_fscore)) + geom_bar(stat="identity", alpha=0.8)  +guides(color = FALSE, fill=FALSE)+
+  labs(x="", y="F-score", title="TFBS+coding_genes") + colScale+fillScale+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+	    	  legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+          axis.ticks.x = element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+  
+print(p)
+
+
+p = ggplot(data=data, aes(x=TFBS_coding_genes_recall, y=TFBS_coding_genes_precision, color=software, shape=software)) + geom_point(alpha=0.8)  +
+  labs(x="recall", y="precision", title="TFBS+coding_genes") + colScale+fillScale+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+	    	  legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+          axis.ticks.x = element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+  
+print(p)
+
+
+
+
+data$coding_genes_recall = (data$depth_genetic_covered) / (161046032)
+data$coding_genes_precision = (data$depth_genetic_covered)/(data$depth_genetic_covered + data$X2018.09.19_covered)
+data$coding_genes_fscore = 2*(data$coding_genes_precision*data$coding_genes_recall)/(data$coding_genes_precision+data$coding_genes_recall)
+
+p = ggplot(data=data, aes(x=approach, y=coding_genes_fscore)) + geom_bar(stat="identity", alpha=0.8)  +guides(color = FALSE, fill=FALSE)+
+  labs(x="", y="F-score", title="coding_genes") + colScale+fillScale+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+	    	  legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+          axis.ticks.x = element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+  
+print(p)
+
+
+p = ggplot(data=data, aes(x=coding_genes_recall, y=coding_genes_precision, color=software, shape=software)) + geom_point(alpha=0.8)  +guides(color = FALSE, fill=FALSE)+
+  labs(x="recall", y="precision", title="coding_genes") + colScale+fillScale+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+	    	  legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+          axis.ticks.x = element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+  
+print(p)
+
+
+
+
+
+
+data$TFBS_recall = (data$depth_covered_bed) / (data$bed)
+data$TFBS_precision = (data$depth_covered_bed)/(data$depth_covered_bed + data$X2018.09.19_covered)
+data$TFBS_fscore = 2*(data$TFBS_precision*data$TFBS_recall)/(data$TFBS_precision+data$TFBS_recall)
+
+p = ggplot(data=data, aes(x=approach, y=TFBS_fscore)) + geom_bar(stat="identity", alpha=0.8)+
+  labs(x="", y="F-score", title="TFBS") + colScale+fillScale+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+	    	  legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+          axis.ticks.x = element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+  
+print(p)
+
+
+
+p = ggplot(data=data, aes(x=TFBS_recall, y=TFBS_precision, color=software, shape=software)) + geom_point(alpha=0.8)  +
+  labs(x="recall", y="precision", title="TFBS") + colScale+fillScale+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+	    	  legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+          axis.ticks.x = element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+  
+print(p)
+
+```
+
+```{r warning=FALSE, fig.height = 8.5, fig.width = 11.25}
+p = ggplot(data=data, aes(x=approach, y=recall, color=approach, fill=approach)) + geom_bar(stat="identity", alpha=0.8)  +guides(color = FALSE, fill=FALSE)+
+  labs(x="", y="Proportion of maize\nTFBS matched to\nsorghum genome", title="") + colScale+fillScale+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+	    	  legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank())
+  
+  
+        
+#	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "TFBS_recall"
+png(paste(file, ".png", sep=""), width=720, height=320)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=4)
+print(p)
+dev.off()
+
+
+totalTELength = read.table("B73.structuralTEv2.disjoined.2018-09-19.bed")
+totalTELength = sum(abs(totalTELength$V3-totalTELength$V2))
+
+totalGenomeLength = read.table("Zea_mays.AGPv4.dna.toplevel.fa.fai")
+totalGenomeLength = sum(totalGenomeLength$V2)
+data$coverage = data$depth/totalGenomeLength
+
+
+dat = rbind( data.frame(approach=data$approach, proportion=data$depth_covered/totalGenomeLength, category = "position match"), data.frame(approach=data$approach, proportion=(data$depth-data$depth_covered)/totalGenomeLength, category = "gap"),  data.frame(approach=data$approach, proportion=(totalGenomeLength-data$depth)/totalGenomeLength, category = "unaligned") )
+
+dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
+p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+  labs(x="", y="Proportion of maize \n genome aligned to sorghum", title="")+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+          legend.position = "top",
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "maize_sorghum_genome_aligned"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+
+
+
+
+dat = rbind( data.frame(approach=data$approach, proportion=data$depth_covered/totalGenomeLength, category = "position match"), data.frame(approach=data$approach, proportion=(data$depth-data$depth_covered)/totalGenomeLength, category = "gap"),  data.frame(approach=data$approach, proportion=(totalGenomeLength-data$depth)/totalGenomeLength, category = "unaligned") )
+
+
+dat = rbind( 
+data.frame(approach=data$approach, proportion=(data$depth_covered-data$X2018.09.19_covered)/totalGenomeLength, c="6non-TE position match", category = "position match", region="Non-TE_PAV"), 
+data.frame(approach=data$approach, proportion=data$X2018.09.19_covered/totalGenomeLength, c="5TE position match", category = "position match", region="TE_PAV"), 
+data.frame(approach=data$approach, proportion=(data$depth-data$depth_covered - data$X2018.09.19  + data$X2018.09.19_covered)/totalGenomeLength, c="3non-TE gap", category = "gap", region="Non-TE_PAV"),  
+data.frame(approach=data$approach, proportion=(data$X2018.09.19-data$X2018.09.19_covered)/totalGenomeLength, c="4TE gap", category = "gap", region="TE_PAV"),
+data.frame(approach=data$approach, proportion=(totalGenomeLength-data$depth-totalTELength+data$X2018.09.19)/totalGenomeLength, c="2non-TE unaligned", category = "unaligned", region="Non-TE_PAV"),
+data.frame(approach=data$approach, proportion=(totalTELength-data$X2018.09.19)/totalGenomeLength, c="1TE unaligned", category = "unaligned", region="TE_PAV") )
+
+dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
+dat$c = factor(dat$c, levels=c("1TE unaligned", "2non-TE unaligned", "3non-TE gap", "4TE gap", "5TE position match", "6non-TE position match"))
+dat$region = factor(dat$region)
+#dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST+one-to-one",  "MUMmer4", "GSAlign"))
+print(dat)
+library(ggpattern)
+p = ggplot(data=dat, aes(x=approach, y=proportion, fill=c, pattern = region)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1","#54AEE1", "#92A000",  "#92A000", "#EF8600", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+  labs(x="", y="Proportion of maize \n genome aligned to sorghum", title="")+
+   geom_bar_pattern( stat="identity", color = "black",  pattern_fill = "black",
+                   pattern_angle = 45,
+                   pattern_density = 0.1,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.6) +
+                   scale_pattern_manual(values = c(TE_PAV = "stripe", TE_PAV = "none")) +
+            theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+              axis.line = element_blank(),
+        legend.position = "top",
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+        
+            panel.background = element_blank(),
+            axis.text.y = element_text( colour = "black"),
+            axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "maize_sorghum_genome_aligned_v2"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+
+
+
+
+data0 = data.frame(software=c("ideal expection", as.character(data$software)), approach=c("ideal expection", as.character(data$approach)), coverage=c(0, (data$X2018.09.19_covered)/data$depth_covered) )
+
+data0$approach <- factor(data0$approach, levels = c("ideal expection", "AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20","LAST+many-to-many", "LAST+many-to-one", "LAST+one-to-one", "MUMmer4", "GSAlign"))
+data0$software <- factor(data0$software, levels = c("ideal expection", "AnchorWave", "minimap2", "LAST", "MUMmer4", "GSAlign"))
+
+
+myColors <- c("#00FF00", "#F8766D", "#D89000", "#A3A500", "#39B600", "#00BFC4", "#00B0F6", "#9590FF", "#E76BF3", "#FF62BC")
+names(myColors) <- levels(data$approach)
+colScale <- scale_colour_manual(name = "grp",values = myColors)
+fillScale <- scale_fill_manual(name = "grp",values = myColors)
+
+
+
+
+p = ggplot(data=data0, aes(x=approach, y=coverage, color=approach, fill=approach)) + geom_bar(stat="identity", alpha=0.8)  +guides(color = FALSE, fill = FALSE)+
+  labs(x="", y="Proportion of maize-sorghum\ngenome alignmenet matchs\nin maize TE region", title="")+ylim(0, 1)+colScale+fillScale+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = c("#00FF00", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000")))
+
+print(p)
+file = "2018.09.19_te_depth"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+
+
+data$X2018.09.19_gaps = data$X2018.09.19 - data$X2018.09.19_covered
+data$total_gaps = data$depth - data$depth_covered
+data$non_TE_gaps = data$total_gaps - data$X2018.09.19_gaps
+data$non_TE_matches = data$depth_covered - data$X2018.09.19_covered
+data$non_TE = data$depth - data$X2018.09.19
+
+data0 = data.frame(software=data$software, approach=data$approach, coverage=((data$X2018.09.19_gaps/data$X2018.09.19) / (data$non_TE_gaps/data$non_TE ) ))  # the value of 162494287 is the total genetic region length, which is counted above in this file
+
+p = ggplot(data=data0, aes(x=approach, y=coverage, color=approach, fill=approach)) +  geom_bar(stat="identity", alpha=0.8)  +guides(color = FALSE, fill = FALSE)+ylim(0, 5)+geom_hline(yintercept=1, linetype="dashed", color = "gray", size=1) +
+  labs(x="", y="Gap ratio in TE\nalignment to gap ratio\nin non-TE alignment", title="")+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "2018.09.19_te_gap_ratio"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+
+
+data0 = data.frame(software=data$software, approach=data$approach, coverage=( (data$non_TE_gaps/data$non_TE ) ))  # the value of 162494287 is the total genetic region length, which is counted above in this file
+
+p = ggplot(data=data0, aes(x=approach, y=coverage, color=approach, fill=approach)) +  geom_bar(stat="identity", alpha=0.8)  +guides(color = FALSE, fill = FALSE)+ylim(0, 1.1)+geom_hline(yintercept=1, linetype="dashed", color = "gray", size=1) +
+  labs(x="", y="Gap ratio in non-TE", title="")+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank())
+
+#	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+
+
+data0 = data.frame(software=data$software, approach=data$approach, coverage=( (data$X2018.09.19_gaps/data$X2018.09.19 ) ))  # the value of 162494287 is the total genetic region length, which is counted above in this file
+
+p = ggplot(data=data0, aes(x=approach, y=coverage, color=approach, fill=approach)) +  geom_bar(stat="identity", alpha=0.8)  +guides(color = FALSE, fill = FALSE)+ylim(0, 1.1)+geom_hline(yintercept=1, linetype="dashed", color = "gray", size=1) +
+  labs(x="", y="Gap ratio in TE", title="")+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank())
+
+#	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+
+
+
+
+
+
+
+data0 = data.frame(software=data$software, approach=data$approach, coverage=((data$X2018.09.19_covered/data$X2018.09.19) / (data$non_TE_matches/data$non_TE ) ))  # the value of 162494287 is the total genetic region length, which is counted above in this file
+p = ggplot(data=data0, aes(x=approach, y=coverage, color=approach, fill=approach)) +  geom_bar(stat="identity", alpha=0.8)  +guides(color = FALSE, fill = FALSE)+ylim(0, 1.1)+geom_hline(yintercept=1, linetype="dashed", color = "gray", size=1) +
+  labs(x="", y="Match ratio in TE\nalignment to match ratio\n in non-TE alignment", title="")+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank())
+
+#	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "2018.09.19_te_match_ratio"
+png(paste(file, ".png", sep=""), width=720, height=320)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=4)
+print(p)
+dev.off()
+
+
+
+
+data0 = data.frame(software=data$software, approach=data$approach, ratio=((data$X2018.09.19-data$X2018.09.19_covered)/data$X2018.09.19), coverage=(data$X2018.09.19 - data$X2018.09.19_covered)/TE2018TotalLength )
+
+p = ggplot(data=data0, aes(x=coverage, y=ratio, color=approach, shape=software)) + geom_point(size=5, alpha=0.8)  +
+  guides(colour = guide_legend(override.aes = list(shape = shape))) +scale_shape(guide = FALSE)+
+  labs(x="Gap ratio in maize TEs(recall) of\nmaize to sorghum genome alignment", y="Gap ratio in maize TE alignments\n(precision)", title="")+xlim(0,1)+ylim(0,1)+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "2018.09.19_te_depth_2"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+
+```
+
+
+
+
+```{r warning=FALSE, fig.height = 40, fig.width = 60}
+# here I am using the Cairo library to compile the output plot. The output file looks better than native library, but it a little bit of mass up the Rmarkdown output file.
+
+library(ggplot2)
+library(compiler)
+enableJIT(3)
+library(ggplot2)
+library("Cairo")
+
+changetoM <- function ( position ){
+  position=position/1000000;
+  paste(position, "M", sep="")
+}
+
+
+
+data =read.table("anchorwave.anchors", head=TRUE)
+data$refChr = paste("chr", data$refChr, sep="")
+data$queryChr = paste("chr", data$queryChr, sep="")
+data = data[which(data$refChr %in% c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10" )),]
+data = data[which(data$queryChr %in% c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10" )),]
+data$refChr = factor(data$refChr, levels=c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10" ))
+data$queryChr = factor(data$queryChr, levels=c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10" ))
+
+data$strand = factor(data$strand)
+data = data[which(data$gene != "intergenetic"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=factor(strand)))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 60) +
+  labs(x="sorghum", y="maize")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="anchors.png",width = 4800, height = 3200)
+p
+dev.off()
+CairoPDF(file="anchors.pdf",width = 60, height = 40)
+p
+dev.off()
+
+
+
+
+
+data =read.table("anchorwave.anchors", head=TRUE)
+data$refChr = paste("chr", data$refChr, sep="")
+data$queryChr = paste("chr", data$queryChr, sep="")
+
+
+data = data[which(data$refChr %in% c("chr4", "chr5")),]
+data = data[which(data$queryChr %in% c("chr4", "chr5" )),]
+data$refChr = factor(data$refChr, levels=c( "chr4", "chr5" ))
+data$queryChr = factor(data$queryChr, levels=c( "chr4", "chr5" ))
+
+data$strand = factor(data$strand)
+data = data[which(data$gene != "intergenetic"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=factor(strand)))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 24) +
+  labs(x="sorghum", y="maize")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="anchor2.png",width = 720, height = 560)
+p
+dev.off()
+CairoPDF(file="anchor2.pdf",width = 9, height = 7)
+p
+dev.off()
+
+
+
+# this plot suggested there is no Interchromosomal translocations  happened
+
+
+
+```
+

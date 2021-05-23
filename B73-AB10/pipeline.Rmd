@@ -1,0 +1,221 @@
+---
+title: ""
+author: "Baoxing Song"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+## Download the maize B73 V4 data, and the genome assembly released by https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-02029-9
+```
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/gff3/zea_mays/Zea_mays.AGPv4.34.gff3.gz
+gunzip Zea_mays.AGPv4.34.gff3.gz
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/fasta/zea_mays/dna/Zea_mays.AGPv4.dna.toplevel.fa.gz
+gunzip Zea_mays.AGPv4.dna.toplevel.fa.gz
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/902/714/155/GCA_902714155.1_Zm-B73_AB10-REFERENCE-NAM-1.0b/GCA_902714155.1_Zm-B73_AB10-REFERENCE-NAM-1.0b_genomic.fna.gz
+gunzip GCA_902714155.1_Zm-B73_AB10-REFERENCE-NAM-1.0b_genomic.fna.gz
+```
+## rename the GCA_902714155.1_Zm-B73_AB10-REFERENCE-NAM-1.0b_genomic.fna entry names, to be consistent with the B73 genome fasta file
+```
+sed -i 's/, whole genome shotgun sequence//' GCA_902714155.1_Zm-B73_AB10-REFERENCE-NAM-1.0b_genomic.fna
+sed -i 's/>.*Zea mays genome assembly, chromosome: />/' GCA_902714155.1_Zm-B73_AB10-REFERENCE-NAM-1.0b_genomic.fna
+```
+
+
+## using proali to extract protein coding sequence. \
+NOTE: please do NOT use CDS extracted using other software. Since proali filtered some CDS records to minimum the impact of minimap2 limitation on genome alignment that "Minimap2 often misses small exons" (https://github.com/lh3/minimap2#limitations)
+```
+anchorwave gff2seq -r Zea_mays.AGPv4.dna.toplevel.fa -i Zea_mays.AGPv4.34.gff3 -o cds.fa
+```
+
+## use minimap2 (https://github.com/lh3/minimap2) to map the extracted sequence to the reference genome sequence and query genome
+```
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 GCA_902714155.1_Zm-B73_AB10-REFERENCE-NAM-1.0b_genomic.fna cds.fa > cds.sam
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Zea_mays.AGPv4.dna.toplevel.fa cds.fa > ref.sam
+```
+
+## perform anchros alignment using two approach implemented in AnchorWave
+```
+anchorwave genoAli -i Zea_mays.AGPv4.34.gff3 -r Zea_mays.AGPv4.dna.toplevel.fa -as cds.fa -a cds.sam -ar ref.sam -s GCA_902714155.1_Zm-B73_AB10-REFERENCE-NAM-1.0b_genomic.fna -n anchorsiv -IV -ns
+anchorwave proali -i Zea_mays.AGPv4.34.gff3 -r Zea_mays.AGPv4.dna.toplevel.fa -as cds.fa -a cds.sam -ar ref.sam -s GCA_902714155.1_Zm-B73_AB10-REFERENCE-NAM-1.0b_genomic.fna -n anchorspro -ns -R 1 -Q 1 -ns
+```
+
+```{r warning=FALSE, fig.height = 40, fig.width = 60}
+# here I am using the Cairo library to compile the output plot. The output file looks better than native library, but it a little bit of mass up the Rmarkdown output file.
+
+library(ggplot2)
+library(compiler)
+enableJIT(3)
+library(ggplot2)
+library("Cairo")
+
+changetoM <- function ( position ){
+  position=position/1000000;
+  paste(position, "M", sep="")
+}
+
+
+
+data =read.table("anchorspro", head=TRUE)
+data = data[which(data$refChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )),]
+data = data[which(data$queryChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )),]
+data$refChr = factor(data$refChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ))
+data$queryChr = factor(data$queryChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ))
+
+data$strand = factor(data$strand)
+data = data[which(data$gene != "intergenetic"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=factor(strand)))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 60) +
+  labs(x="B73-Ab10", y="B73")+
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="anchorspro.png",width = 4800, height = 3200)
+p
+dev.off()
+CairoPDF(file="anchorspro.pdf",width = 60, height = 40)
+p
+dev.off()
+```
+
+The above plot suggested there is no unterchromosomal translocations  happened
+```{r warning=FALSE, fig.height = 40, fig.width = 60}
+
+
+data =read.table("anchorsiv", head=TRUE)
+data = data[which(data$refChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )),]
+data = data[which(data$queryChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )),]
+data$refChr = factor(data$refChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ))
+data$queryChr = factor(data$queryChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ))
+
+data$strand = factor(data$strand)
+data = data[which(data$gene != "intergenetic"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=factor(strand)))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 60) +
+  labs(x="B73-Ab10", y="B73")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="anchorsiv.png",width = 4800, height = 3200)
+p
+dev.off()
+CairoPDF(file="anchorsiv.pdf",width = 60, height = 40)
+p
+dev.off()
+
+
+
+
+
+
+
+data =read.table("anchorsiv", head=TRUE)
+data = data[which(data$refChr %in% c("10" )),]
+data = data[which(data$queryChr %in% c("10" )),]
+
+data0 = data.frame(x1=rep(1, nrow(data)), x2=rep(2, nrow(data)), y1=data$referenceStart, y2=data$queryStart, strand=data$strand )
+
+
+data = data.frame(y=c("1","1","1","1","2","2","2","2"), x=c(144424469, 141366825, 150831625, 144633000, 153050093, 157236690, 159325876, 167708883), color=c("#F8766D", "#F8766D", "#F8766D", "#F8766D", "#F8766D","#F8766D", "#F8766D", "#F8766D"))
+
+data = data.frame(y=c("1","1","2","2","2"), x=c(144424469, 141366825, 159325876, 167708883, 142302496), color=c("#F8766D", "#F8766D", "#F8766D", "#F8766D", "#00BFC4"))
+
+d0 <- data.frame(x1 = 141182907, x2 = 142302496, y1 = 1, y2 = 2) 
+d1 <- data.frame(x1 = 144424469, x2 = 153050093, y1 = 1, y2 = 2) 
+d2 <- data.frame(x1 = 141366825, x2 = 157236690, y1 = 1, y2 = 2) 
+d3 <- data.frame(x1 = 150831625, x2 = 159325876, y1 = 1, y2 = 2) 
+d4 <- data.frame(x1 = 144633000, x2 = 167708883, y1 = 1, y2 = 2)
+
+d=data.frame(x=c(144424469, 141366825, 157236690, 153050093), y=c("1", "1", "2", "2"), t=c('a','a','a','a'))
+dd=data.frame(x=c(150831625, 144633000, 167708883, 159325876), y=c("1", "1", "2", "2"), t=c('a','a','a','a'))
+
+data0 =data0[which(data0$y1 >= 140000000),]
+
+myguide <- guide_legend(keywidth = unit(2, "cm"), keyheight= unit(0.8, "cm"))
+
+p = ggplot(data=data, aes(x=x,y=y))+
+  geom_segment(aes(x=140000000, xend=150982314, y=1,yend=1), color = "darkgray", size=2) +
+  geom_segment(aes(x=140000000, xend=172000000, y=2, yend=2), color = "darkgray", size=2) +
+  geom_segment(aes(x = y1, y = x1, xend = y2, yend = x2, color = strand), data = data0, size=0.5, alpha=0.4) + 
+  geom_point(color=c("#F8766D", "#F8766D","#F8766D", "#F8766D", "#00BFC4"), size=2) +
+  annotate("text", x = 146700000, y = 0.675, label = "Zm00001d026368", color = "#F8766D", parse = TRUE, size=6, angle = 315) +
+  annotate("text", x = 143700000, y = 0.675, label = "Zm00001d026218", color = "#F8766D", parse = TRUE, size=6, angle = 315)+
+  annotate("text", x = 159325876, y = 2.06, label = "Zm00001d026712", color = "#F8766D", parse = TRUE, size=6)+
+  annotate("text", x = 167708883, y = 2.06, label = "Zm00001d026376", color = "#F8766D", parse = TRUE, size=6) + 
+  annotate("text", x = 142302496, y = 2.06, label = "Zm00001d026214", color = "#00BFC4", parse = TRUE, size=6) + 
+  theme_grey(base_size = 24) +
+  scale_colour_manual(name='strand', 
+                      values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) +
+  labs(x="", y="")+scale_x_continuous(limits=c(140000000, 172000000), labels=changetoM) +scale_y_discrete(labels=c("1" = "B73", "2" = "B73-Ab10") ) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        legend.key = element_rect(colour = NA, fill = NA),
+        axis.text.y = element_text( colour = "black"),
+        legend.position = c(0.8, 0.4),
+        legend.background = element_rect(fill="transparent"),
+        axis.text.x = element_text( colour = "black"),
+        axis.ticks.y=element_blank())
+
+
+CairoPNG(file="inversionv2.png",width = 1280, height = 560)
+p
+dev.off()
+CairoPDF(file="inversionv2.pdf",width = 16, height = 7)
+p
+dev.off()
+
+
+
+
+
+
+
+data =read.table("anchorsiv", head=TRUE)
+library(data.table)
+data = data[data$gene %like% "transcript", ]
+
+data = data[which(data$refChr %in% c("1" )),]
+data = data[which(data$queryChr %in% c("1" )),]
+
+data0 = data.frame(x1=rep(1, nrow(data)), x2=rep(2, nrow(data)), y1=data$referenceStart, y2=data$queryStart, strand=data$strand )
+
+
+data0 =data0[which(data0$y1 >= 34000000 & data0$y1<37500000),]
+
+myguide <- guide_legend(keywidth = unit(2, "cm"), keyheight= unit(0.8, "cm"))
+
+p = ggplot()+
+  geom_segment(aes(x = y1, y = x1, xend = y2, yend = x2, color = strand), data = data0, size=0.5) + 
+  theme_grey(base_size = 24) +
+  scale_colour_manual(name='strand', 
+                      values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) +
+  labs(x="", y="")+scale_x_continuous(limits=c(34000000, 37500000), labels=changetoM) +scale_y_discrete(labels=c("1" = "B73", "2" = "SK") ) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        legend.key = element_rect(colour = NA, fill = NA),
+        axis.text.y = element_text( colour = "black"),
+        legend.position = c(0.5, 0.85),
+        legend.background = element_rect(fill="transparent"),
+        axis.text.x = element_text( colour = "black"),
+        axis.ticks.y=element_blank())
+
+
+CairoPNG(file="inversionv3.png",width = 1280, height = 560)
+p
+dev.off()
+CairoPDF(file="inversionv3.pdf",width = 16, height = 7)
+p
+dev.off()
+
+```

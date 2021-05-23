@@ -1,0 +1,299 @@
+---
+title: "TE deletion variation recalling comparsion using different genome alignment program"
+author: "Baoxing Song"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+Download the maize B73 V4 data
+```
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/gff3/zea_mays/Zea_mays.AGPv4.34.gff3.gz
+gunzip Zea_mays.AGPv4.34.gff3.gz
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/fasta/zea_mays/dna/Zea_mays.AGPv4.dna.toplevel.fa.gz
+gunzip Zea_mays.AGPv4.dna.toplevel.fa.gz
+```
+
+
+The TE annotation in GFF format: B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3 has been attached. And the TE removed genome fasta file(B73V4.pseudomolecule.subtract1.fa) could be reproduced using the 'gffToMaf, c1' code block located within ./src/tests/impl/TEGffToAlignment.cpp \
+Run the  gff2Vcf test function implemented ./src/tests/impl/TEGffToAlignment.cpp to create the variant records file  B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.vcf \
+\
+Plot the deletion length distributions
+```{r warning=FALSE, fig.height = 8.75, fig.width = 11.66667}
+library(ggplot2)
+library(data.table)
+library(dplyr)
+
+dat = fread("B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.vcf", select = c(1:3))
+dat$V3 = -dat$V3
+summary(dat$V3)
+p = ggplot(dat, aes(V3))+geom_histogram(aes(y=cumsum(..count..)), color="#00BFC4", fill="#00BFC4", bins=10000) + labs(x="Deletion length", y="Cumulative count", fill="", title="") +
+    theme_grey(base_size = 36) + 
+    theme(axis.line = element_blank(), panel.background = element_blank(),panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid") )
+print(p)
+png("Cumulative_count.png", width=800, height=600)
+print(p)
+dev.off()
+
+pdf("Cumulative_count.pdf", width=11.66667, height=8.75)
+print(p)
+dev.off()
+
+
+df<- dat[order(V3),] %>% mutate(CUMFREQ=cumsum(V3))
+p = ggplot(data=df, aes(x=V3, y=CUMFREQ)) + geom_area( fill = "#00BFC4", position = 'identity')  + labs(x="Deletion length", y="Cumulative length", fill="", title="") + 
+    theme_grey(base_size = 36) + 
+    theme(axis.line = element_blank(), panel.background = element_blank(),panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid") )
+print(p)
+png("Cumulative_length.png", width=800, height=600)
+print(p)
+dev.off()
+
+pdf("Cumulative_length.pdf", width=11.66667, height=8.75)
+print(p)
+dev.off()
+```
+
+
+
+Using ProAli to extract full-length CDS. \
+NOTE: please do NOT use CDS extracted using other software and do NOT use the output full-length CDS file for other purpose. Since ProAli filtered some CDS records to minimum the impact of minimap2 limitation on genome alignment that "Minimap2 often misses small exons" (https://github.com/lh3/minimap2#limitations)
+```
+anchorwave gff2seq -r Zea_mays.AGPv4.dna.toplevel.fa -i Zea_mays.AGPv4.34.gff3 -o cds.fa
+```
+
+Using minimap2 (https://github.com/lh3/minimap2) to map the extracted sequence to the reference genome sequence and synthesis genomes
+```
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 B73V4.pseudomolecule.subtract1.fa cds.fa > cds.sam
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 Zea_mays.AGPv4.dna.toplevel.fa cds.fa > ref.sam
+
+```
+
+Using ProAli to perform genome alignment
+```
+/usr/bin/time anchorwave genoAli -i Zea_mays.AGPv4.34.gff3 -r Zea_mays.AGPv4.dna.toplevel.fa -a cds.sam -as cds.fa -ar ref.sam -s B73V4.pseudomolecule.subtract1.fa -v subtract.vcf -n subtract.anchors -o subtract.maf -f subtract.f.maf -w 38000 -fa3 200000 -B -6 -O1 -8 -E1 -2 -O2 -75 -E2 -1 -t 1 >anchorwave_alignment.log 2>&1 &
+```
+
+Evaluate the ProAli result
+
+```
+anchorwave evaluateTEAlignment -c 1 -o 1_subtract1.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 2 -o 2_subtract1.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 3 -o 3_subtract1.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 4 -o 4_subtract1.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 5 -o 5_subtract1.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 6 -o 6_subtract1.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 7 -o 7_subtract1.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 8 -o 8_subtract1.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 9 -o 9_subtract1.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 10 -o 10_subtract1.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+
+grep "good" *_subtract1.vcf.errors | wc -l; grep "bad" *_subtract1.vcf.errors | wc -l
+```
+The result was 80344 and 3927 \
+\
+
+Use minimap2 to perform genome alignment
+```
+/usr/bin/time -v minimap2 -x asm5 -t 1 -a Zea_mays.AGPv4.dna.toplevel.fa  B73V4.pseudomolecule.subtract1.fa -o minimap2_asm5.sam > minimap2_asm5.log 2>&1
+/usr/bin/time -v minimap2 -x asm10 -t 1 -a Zea_mays.AGPv4.dna.toplevel.fa  B73V4.pseudomolecule.subtract1.fa o minimap2_asm10.sam > minimap2_asm10.log 2>&1
+minimap2 -x asm20 -t 1 -a Zea_mays.AGPv4.dna.toplevel.fa  B73V4.pseudomolecule.subtract1.fa -o minimap2_asm20.sam > minimap2_asm20log # we did not run this one succefully, get an "insufficient memory" error on a computer with 2Tb memory avaliable
+```
+
+Transform the output SAM files into MAF format and then VCF format \
+Finally evaluate the VCF format variant calling result
+```
+anchorwave sam2maf -r Zea_mays.AGPv4.dna.toplevel.fa -s minimap2_asm5.sam -q B73V4.pseudomolecule.subtract1.fa -o minimap2_asm5.maf
+anchorwave sam2maf -r Zea_mays.AGPv4.dna.toplevel.fa -s minimap2_asm10.sam -q B73V4.pseudomolecule.subtract1.fa -o minimap2_asm10.maf
+
+anchorwave maf2vcf -r Zea_mays.AGPv4.dna.toplevel.fa -o minimap2_asm5.vcf -m minimap2_asm5.maf
+anchorwave maf2vcf -r Zea_mays.AGPv4.dna.toplevel.fa -o minimap2_asm10.vcf -m minimap2_asm10.maf
+
+anchorwave evaluateTEAlignment -c 1 -o 1_minimap2_asm5.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm5.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 2 -o 2_minimap2_asm5.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm5.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 3 -o 3_minimap2_asm5.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm5.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 4 -o 4_minimap2_asm5.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm5.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 5 -o 5_minimap2_asm5.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm5.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 6 -o 6_minimap2_asm5.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm5.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 7 -o 7_minimap2_asm5.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm5.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 8 -o 8_minimap2_asm5.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm5.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 9 -o 9_minimap2_asm5.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm5.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 10 -o 10_minimap2_asm5.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm5.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+
+
+anchorwave evaluateTEAlignment -c 1 -o 1_minimap2_asm10.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm10.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 2 -o 2_minimap2_asm10.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm10.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 3 -o 3_minimap2_asm10.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm10.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 4 -o 4_minimap2_asm10.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm10.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 5 -o 5_minimap2_asm10.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm10.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 6 -o 6_minimap2_asm10.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm10.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 7 -o 7_minimap2_asm10.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm10.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 8 -o 8_minimap2_asm10.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm10.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 9 -o 9_minimap2_asm10.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm10.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 10 -o 10_minimap2_asm10.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v minimap2_asm10.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+```
+
+
+
+Perform genome alignment using GSAlign and MUMmer4 and evaluate TE deletions recall ratio
+```
+/usr/bin/time -v GSAlign -r Zea_mays.AGPv4.dna.toplevel.fa -q B73V4.pseudomolecule.subtract1.fa -t 1 -o subtract_gsalign -fmt 1 > gsalig.log 2>&1
+
+sed -i 's/ref./col./g' subtract_gsalign.maf
+sed -i 's/qry./query./g' subtract_gsalign.maf
+anchorwave maf2vcf -r Zea_mays.AGPv4.dna.toplevel.fa -o subtract_gsalign.vcf -m subtract_gsalign.maf
+anchorwave evaluateTEAlignment -c 1 -o 1_subtract_gsalign.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract_gsalign.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 2 -o 2_subtract_gsalign.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract_gsalign.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 3 -o 3_subtract_gsalign.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract_gsalign.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 4 -o 4_subtract_gsalign.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract_gsalign.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 5 -o 5_subtract_gsalign.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract_gsalign.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 6 -o 6_subtract_gsalign.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract_gsalign.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 7 -o 7_subtract_gsalign.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract_gsalign.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 8 -o 8_subtract_gsalign.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract_gsalign.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 9 -o 9_subtract_gsalign.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract_gsalign.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 10 -o 10_subtract_gsalign.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v subtract_gsalign.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+
+
+/usr/bin/time -v nucmer -t 1 --sam-short=mumer.subtract.short.sam Zea_mays.AGPv4.dna.toplevel.fa B73V4.pseudomolecule.subtract1.fa > nucmer.log 2>&1
+anchorwave sam2maf -o mumer.subtract.short.maf -r Zea_mays.AGPv4.dna.toplevel.fa -q B73V4.pseudomolecule.subtract1.fa -s mumer.subtract.short.sam
+
+
+anchorwave maf2vcf -r Zea_mays.AGPv4.dna.toplevel.fa -o mumer.subtract.short.vcf -m mumer.subtract.short.maf
+grep -v "#"  mumer.subtract.short.vcf | awk 'length($4) != length($5) {print $0}' | awk 'length($4)>1000 {print $0}'> mumer.subtract.short_indel_only.vcf
+
+
+anchorwave evaluateTEAlignment -c 1 -o 1_mumer.subtract.short_indel_only.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v mumer.subtract.short_indel_only.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 2 -o 2_mumer.subtract.short_indel_only.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v mumer.subtract.short_indel_only.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 3 -o 3_mumer.subtract.short_indel_only.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v mumer.subtract.short_indel_only.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 4 -o 4_mumer.subtract.short_indel_only.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v mumer.subtract.short_indel_only.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 5 -o 5_mumer.subtract.short_indel_only.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v mumer.subtract.short_indel_only.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 6 -o 6_mumer.subtract.short_indel_only.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v mumer.subtract.short_indel_only.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 7 -o 7_mumer.subtract.short_indel_only.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v mumer.subtract.short_indel_only.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 8 -o 8_mumer.subtract.short_indel_only.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v mumer.subtract.short_indel_only.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 9 -o 9_mumer.subtract.short_indel_only.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v mumer.subtract.short_indel_only.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+anchorwave evaluateTEAlignment -c 10 -o 10_mumer.subtract.short_indel_only.vcf.errors -r Zea_mays.AGPv4.dna.toplevel.fa -v mumer.subtract.short_indel_only.vcf -g B73V4.pseudomolecule.ltrharvest.contignames.gff3.contigpositions.gff3
+
+
+grep -v "#" subtract_gsalign.vcf | awk 'length($4)>1000 {print $0}' # the result is 0
+grep -v "#" mumer.subtract.short.vcf | awk 'length($4)>1000 {print $0}' # the result was 0
+```
+
+Perform genome alignment using the LAST pipeline
+```
+
+lastdb B73v4 Zea_mays.AGPv4.dna.toplevel.fa
+faToTwoBit Zea_mays.AGPv4.dna.toplevel.fa B73v4.2bit
+faSize -detailed Zea_mays.AGPv4.dna.toplevel.fa > B73v4.size
+lastal B73v4 B73V4.pseudomolecule.subtract1.fa > subtract1_lastal.maf
+faSize -detailed B73V4.pseudomolecule.subtract1.fa > subtract.size
+faToTwoBit B73V4.pseudomolecule.subtract1.fa subtract.2bit
+maf-convert psl subtract1_lastal.maf > subtract1_lastal.psl
+axtChain -linearGap=loose -psl subtract1_lastal.psl -faQ -faT Zea_mays.AGPv4.dna.toplevel.fa B73V4.pseudomolecule.subtract1.fa subtract1_lastal.chain
+chainMergeSort subtract1_lastal.chain > subtract1_lastal.all.chain
+chainPreNet subtract1_lastal.all.chain B73v4.size subtract.size subtract1_lastal.preNet
+chainNet subtract1_lastal.preNet B73v4.size subtract.size subtract1_lastal.refTarget.net subtract1_lastal.chainNet
+netToAxt subtract1_lastal.refTarget.net subtract1_lastal.preNet B73v4.2bit subtract.2bit stdout | axtSort stdin subtract1_lastal.axt
+axtToMaf subtract1_lastal.axt B73v4.size subtract.size subtract1_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl subtract1_lastal_final.maf > subtract1_lastal_lastal_final_forsplit.maf
+cat subtract1_lastal.maf | last-split | maf-swap | last-split | maf-swap  > subtract1_lastal_split.maf
+cat subtract1_lastal_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > subtract1_lastal_final_split.maf
+perl lastToMafComparsion.pl subtract1_lastal_split.maf > subtract1_lastal_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl subtract1_lastal_final_split.maf > subtract1_lastal_final_split_Comparator.maf
+
+/usr/bin/time -v bash lastalPipeline.sh > lastal.log 2>&1
+```
+
+```
+anchorwave maf2vcf -r Zea_mays.AGPv4.dna.toplevel.fa -o subtract1_lastal_final_split.vcf -m subtract1_lastal_final_split.maf
+anchorwave maf2vcf -r Zea_mays.AGPv4.dna.toplevel.fa -o subtract1_lastal_split.vcf -m subtract1_lastal_split.maf
+
+grep -v "#" subtract1_lastal_final_split.vcf | awk 'length($4)>1000 {print $0}'
+grep -v "#" subtract1_lastal_split.vcf | awk 'length($4)>1000 {print $0}'
+# and there is no variants longer than 1Kb
+```
+
+
+Check the length distribution for those deletions being recalled correctly/incorrectly using AnchorWave and minimap2\
+```
+grep "good" *_minimap2_asm10.vcf.errors | wc -l; grep "bad" *_minimap2_asm10.vcf.errors | wc -l # 17452  66819
+grep "good" *_minimap2_asm5.vcf.errors | wc -l; grep "bad" *_minimap2_asm5.vcf.errors | wc -l # 18004 66267
+cat *_minimap2_asm5.vcf.errors | awk '{print "minimap2_asm5\t" $1 "\t" $4}' > good_bad_deletionLength
+cat *_minimap2_asm10.vcf.errors | awk '{print "minimap2_asm10\t" $1 "\t" $4}' >> good_bad_deletionLength
+cat *_subtract1.vcf.errors| awk '{print "AnchorWave\t" $1 "\t" $4}' >> good_bad_deletionLength
+```
+
+
+Manually organize the outputs of evaluateTEAlignment into a file names as recallData, and generate plot\
+```{r warning=FALSE, fig.height = 9.916666, fig.width = 13.125}
+
+
+library(ggplot2)
+dat = read.table("recallData", header=TRUE)
+print(dat)
+
+dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10",  "LAST+one-to-one", "MUMmer4", "GSAlign"))
+dat$software <- factor(dat$software, levels = c("AnchorWave", "minimap2", "LAST", "MUMmer4", "GSAlign"))
+
+myColors <- c("#F8766D", "#D89000", "#A3A500", "#00BF7D",  "#E76BF3", "#FF62BC")
+names(myColors) <- levels(dat$approach)
+colScale <- scale_colour_manual(name = "grp",values = myColors)
+fillScale <- scale_fill_manual(name = "grp",values = myColors)
+
+
+p = ggplot(data=dat, aes(x=approach, y=Recall, color=approach, fill=approach)) + geom_bar(stat="identity", alpha=0.8)  +guides(color = FALSE, fill=FALSE)+
+  labs(x="", y="Simulated maize TE recall", title="")+colScale+fillScale+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "recall"
+png(paste(file, ".png", sep=""), width=640, height=560)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=8, height=7)
+print(p)
+dev.off()
+
+
+dat = read.table("good_bad_deletionLength")
+dat$V2 = as.character(dat$V2)
+dat[which(dat$V2=="good"),]$V2 = "correct"
+dat[which(dat$V2=="bad"),]$V2 = "incorrect"
+dat$V3 = - dat$V3
+dat$V1 = factor(dat$V1, levels=c("AnchorWave", "minimap2_asm5", "minimap2_asm10"))
+dat$V2 = factor(dat$V2, levels=c("correct", "incorrect"))
+p = ggplot(data=dat, aes(x=V3, color=V2)) +geom_density()+facet_wrap(~ V1)+
+  labs(x="Deletion length", y="Density", title="")+
+	    	theme_bw() +theme_grey(base_size = 28) + 
+    theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.title = element_blank(),
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+print(p)
+file = "good_bad_deletionLength"
+png(paste(file, ".png", sep=""), width=900, height=680)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=13.125, height=9.916666)
+print(p)
+dev.off()
+
+
+```
