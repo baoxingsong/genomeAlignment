@@ -1,0 +1,324 @@
+---
+title: ""
+author: "Baoxing Song"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+## Download the maize B73 V4 data, and the genome assembly released by  https://www.nature.com/articles/s41588-019-0427-6
+https://bigd.big.ac.cn/gwh/Assembly/123/show
+
+
+```
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/gff3/zea_mays/Zea_mays.AGPv4.34.gff3.gz
+gunzip Zea_mays.AGPv4.34.gff3.gz
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/fasta/zea_mays/dna/Zea_mays.AGPv4.dna.toplevel.fa.gz
+gunzip Zea_mays.AGPv4.dna.toplevel.fa.gz
+wget ftp://download.big.ac.cn/gwh/Plants/Zea_mays_the_genome_of_SK_GWHAACS00000000/GWHAACS00000000.genome.fasta.gz
+gunzip GWHAACS00000000.genome.fasta.gz
+```
+## rename the GWHAACS00000000.genome.fasta entry names, to be consistent with the B73 genome fasta file
+```
+sed -i 's/>.*Chromosome\s/>/g' GWHAACS00000000.genome.fasta
+sed -i 's/\s.*//g' GWHAACS00000000.genome.fasta
+```
+
+
+## using AnchorWave to extract protein coding sequence. \
+NOTE: please do NOT use CDS extracted using other software. Since proali filtered some CDS records to minimum the impact of minimap2 limitation on genome alignment that "Minimap2 often misses small exons" (https://github.com/lh3/minimap2#limitations)
+```
+anchorwave gff2seq -r Zea_mays.AGPv4.dna.toplevel.fa -i Zea_mays.AGPv4.34.gff3 -o cds.fa
+```
+
+## use minimap2 (https://github.com/lh3/minimap2) to map the extracted sequence to the reference genome sequence and query genome
+```
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 GWHAACS00000000.genome.fasta cds.fa > cds.sam
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Zea_mays.AGPv4.dna.toplevel.fa cds.fa > ref.sam
+```
+
+## perform anchros alignment using proali
+```
+perl alignmentToDotplot.pl ./Zea_mays.AGPv4.34.gff3 cds.sam > align.tab
+anchorwave genoAli -i Zea_mays.AGPv4.34.gff3 -r Zea_mays.AGPv4.dna.toplevel.fa -as cds.fa -a cds.sam -ar ref.sam -s GWHAACS00000000.genome.fasta -n anchorsiv -IV -ns
+anchorwave proali -i Zea_mays.AGPv4.34.gff3 -r Zea_mays.AGPv4.dna.toplevel.fa -as cds.fa -a cds.sam -ar ref.sam -s GWHAACS00000000.genome.fasta -n anchorspro -ns -R 1 -Q 1
+
+```
+
+
+
+
+```{r warning=FALSE, fig.height = 40, fig.width = 60}
+# here I am using the Cairo library to compile the output plot. The output file looks better than native library, but it a little bit of mass up the Rmarkdown output file.
+library(ggplot2)
+library(compiler)
+enableJIT(3)
+library(ggplot2)
+library("Cairo")
+
+changetoM <- function ( position ){
+  position=position/1000000;
+  paste(position, "M", sep="")
+}
+
+
+
+
+data =read.table("align.tab")
+data = data[which(data$V1 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )),]
+data = data[which(data$V3 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )),]
+data$V1 = factor(data$V1, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ))
+data$V3 = factor(data$V3, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ))
+
+data$strand = factor(data$V5)
+
+p = ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=2, aes(color=strand))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 60) +
+  labs(x="SK", y="B73")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position= "right",
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="align.pdf",width = 90, height = 52)
+p
+dev.off()
+
+CairoPNG(file="align.png",width = 9600, height = 4160)
+p
+dev.off()
+
+
+
+data =read.table("anchorsiv", head=TRUE)
+data = data[which(data$refChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )),]
+data = data[which(data$queryChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )),]
+data$refChr = factor(data$refChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ))
+data$queryChr = factor(data$queryChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ))
+
+data$strand = factor(data$strand)
+data = data[which(data$gene != "interanchor"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand), alpha=0.4)+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 60) +
+  labs(x="SK", y="B73")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='right',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="anchorsiv.pdf",width = 90, height = 52)
+p
+dev.off()
+CairoPNG(file="anchorsiv.png",width = 7200, height = 4160)
+p
+dev.off()
+
+
+alphas = c("+" = 0.05, "-" = 1)
+
+dat1 = data[which(data$refChr == "1"),]
+myguide <- guide_legend(keywidth = unit(2, "cm"), keyheight= unit(0.8, "cm"))
+p = ggplot(data=dat1, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand, alpha=strand, fill=strand))+ theme_grey(base_size = 60) +
+  scale_colour_manual(name='strand', values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) + scale_alpha_manual(values = alphas)+
+  labs(x="SK Chr1", y="B73 Chr1")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position= 'none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="chr1.pdf",width = 45, height = 26)
+p
+dev.off()
+CairoPNG(file="chr1.png",width = 3600, height = 2080)
+p
+dev.off()
+
+
+dat2 = data[which(data$refChr == "2"),]
+p = ggplot(data=dat2, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand, alpha=strand, fill=strand))+ theme_grey(base_size = 60) +
+  scale_colour_manual(name='strand', values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) + scale_alpha_manual(values = alphas)+
+  labs(x="SK Chr2", y="B73 Chr2")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="chr2.pdf",width = 45, height = 26)
+p
+dev.off()
+CairoPNG(file="chr2.png",width = 3600, height = 2080)
+p
+dev.off()
+
+
+dat3 = data[which(data$refChr == "3"),]
+p = ggplot(data=dat3, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand, alpha=strand, fill=strand))+ theme_grey(base_size = 60) +
+  scale_colour_manual(name='strand', values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) + scale_alpha_manual(values = alphas)+
+  labs(x="SK Chr3", y="B73 Chr3")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="chr3.pdf",width = 45, height = 26)
+p
+dev.off()
+CairoPNG(file="chr3.png",width = 3600, height = 2080)
+p
+dev.off()
+
+
+dat4 = data[which(data$refChr == "4"),]
+p = ggplot(data=dat4, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand, alpha=strand, fill=strand))+ theme_grey(base_size = 60) +
+  scale_colour_manual(name='strand', values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) + scale_alpha_manual(values = alphas)+
+  labs(x="SK Chr4", y="B73 Chr4")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="chr4.pdf",width = 45, height = 26)
+p
+dev.off()
+CairoPNG(file="chr4.png",width = 3600, height = 2080)
+p
+dev.off()
+
+
+dat5 = data[which(data$refChr == "5"),]
+p = ggplot(data=dat5, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand, alpha=strand, fill=strand))+ theme_grey(base_size = 60) +
+  scale_colour_manual(name='strand', values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) + scale_alpha_manual(values = alphas)+
+  labs(x="SK Chr5", y="B73 Chr5")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="chr5.pdf",width = 45, height = 26)
+p
+dev.off()
+CairoPNG(file="chr5.png",width = 3600, height = 2080)
+p
+dev.off()
+
+
+dat6 = data[which(data$refChr == "6"),]
+p = ggplot(data=dat6, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand, alpha=strand, fill=strand))+ theme_grey(base_size = 60) +
+  scale_colour_manual(name='strand', values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) + scale_alpha_manual(values = alphas)+
+  labs(x="SK Chr6", y="B73 Chr6")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="chr6.pdf",width = 45, height = 26)
+p
+dev.off()
+CairoPNG(file="chr6.png",width = 3600, height = 2080)
+p
+dev.off()
+
+dat7 = data[which(data$refChr == "7"),]
+p = ggplot(data=dat7, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand, alpha=strand, fill=strand))+ theme_grey(base_size = 60) +
+  scale_colour_manual(name='strand', values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) + scale_alpha_manual(values = alphas)+
+  labs(x="SK Chr7", y="B73 Chr7")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="chr7.pdf",width = 45, height = 26)
+p
+dev.off()
+CairoPNG(file="chr7.png",width = 3600, height = 2080)
+p
+dev.off()
+
+dat8 = data[which(data$refChr == "8"),]
+p = ggplot(data=dat8, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand, alpha=strand, fill=strand))+ theme_grey(base_size = 60) +
+  scale_colour_manual(name='strand', values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) + scale_alpha_manual(values = alphas)+
+  labs(x="SK Chr8", y="B73 Chr8")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="chr8.pdf",width = 45, height = 26)
+p
+dev.off()
+CairoPNG(file="chr8.png",width = 3600, height = 2080)
+p
+dev.off()
+
+
+dat9 = data[which(data$refChr == "9"),]
+p = ggplot(data=dat9, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand, alpha=strand, fill=strand))+ theme_grey(base_size = 60) +
+  scale_colour_manual(name='strand', values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) + scale_alpha_manual(values = alphas)+
+  labs(x="SK  Chr9", y="B73  Chr9")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="chr9.pdf",width = 45, height = 26)
+p
+dev.off()
+CairoPNG(file="chr9.png",width = 3600, height = 2080)
+p
+dev.off()
+
+dat10 = data[which(data$refChr == "10"),]
+p = ggplot(data=dat10, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand, alpha=strand, fill=strand))+ theme_grey(base_size = 60) +
+  scale_colour_manual(name='strand', values=c('+'='#00BFC4', '-'='#F8766D'), guide = myguide) + scale_alpha_manual(values = alphas)+
+  labs(x="SK Chr10", y="B73 Chr10")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="chr10.pdf",width = 45, height = 26)
+p
+dev.off()
+CairoPNG(file="chr10.png",width = 3600, height = 2080)
+p
+dev.off()
+
+
+
+
+
+
+data =read.table("anchorspro", head=TRUE)
+data = data[which(data$refChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )),]
+data = data[which(data$queryChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )),]
+data$refChr = factor(data$refChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ))
+data$queryChr = factor(data$queryChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ))
+
+data$strand = factor(data$strand)
+data = data[which(data$gene != "interanchor"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 60) +
+  labs(x="SK", y="B73")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPDF(file="anchorspro.pdf",width = 90, height = 52)
+p
+dev.off()
+
+```

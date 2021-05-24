@@ -813,7 +813,7 @@ commapos <- function(x, ...) {
      format(abs(x), big.mark = ",", trim = TRUE,
          scientific = TRUE, ...)
  }
-ggplot(data, aes(x = V1, y = V3, fill = V2)) +  geom_col() + scale_y_continuous(labels = commapos) + coord_trans( y = "log10")
+#ggplot(data, aes(x = V1, y = V3, fill = V2)) +  geom_col() + scale_y_continuous(labels = commapos) + coord_trans( y = "log10")
 
 ```
 
