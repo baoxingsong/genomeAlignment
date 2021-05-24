@@ -1,0 +1,281 @@
+---
+title: ""
+author: "Baoxing Song"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+```
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/pan_troglodytes/dna/Pan_troglodytes.Pan_tro_3.0.dna.toplevel.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/gff3/homo_sapiens/Homo_sapiens.GRCh38.102.gff3.gz
+
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.1.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.2.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.3.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.4.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.5.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.6.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.7.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.8.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.9.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.10.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.11.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.12.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.13.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.14.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.15.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.16.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.17.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.18.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.19.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.20.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.21.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.22.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.X.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.Y.fa.gz
+gunzip *gz
+cat Homo_sapiens.GRCh38.dna.chromosome.*.fa > hg38.fa
+rm Homo_sapiens.GRCh38.dna.chromosome.*.fa
+anchorwave gff2seq -r hg38.fa -i Homo_sapiens.GRCh38.102.gff3 -o cds.fa
+minimap2 -x splice -t 10 -k 12 -a -p 0.4 -N 20 hg38.fa cds.fa > ref.sam
+minimap2 -x splice -t 10 -k 12 -a -p 0.4 -N 20 Pan_troglodytes.Pan_tro_3.0.dna.toplevel.fa cds.fa > cds.sam
+
+
+/usr/bin/time minimap2 -x asm5 -t 40 -a hg38.fa Pan_troglodytes.Pan_tro_3.0.dna.toplevel.fa -o minimap2_asm5.sam > minimap2_asm5log 2>&1
+/usr/bin/time minimap2 -x asm10 -t 40 -a hg38.fa Pan_troglodytes.Pan_tro_3.0.dna.toplevel.fa -o minimap2_asm10.sam > minimap2_asm10log 2>&1
+/usr/bin/time minimap2 -x asm20 -t 40 -a hg38.fa Pan_troglodytes.Pan_tro_3.0.dna.toplevel.fa -o minimap2_asm20.sam > minimap2_asm20log 2>&1
+
+
+/usr/bin/time anchorwave proali -i Homo_sapiens.GRCh38.102.gff3 -r hg38.fa -a cds.sam -as cds.fa -ar ref.sam -s Pan_troglodytes.Pan_tro_3.0.dna.toplevel.fa -n panTro3.anchors -R 1 -Q 1 -o panTro3.maf -f panTro3.f.maf -w 38000 -fa3 200000 -B -4 -O1 -4 -E1 -2 -O2 -80 -E2 -1 -t 19 -mi 0 > anchorwave.log 2>&1
+
+
+maf-convert sam panTro3.maf | sed 's/hg38.fa.//g' | sed 's/Pan_troglodytes.Pan_tro_3.0.dna.toplevel.fa.//g' > panTro3.sam
+cat panTro3.sam | samtools view -O BAM --reference hg38.fa - | samtools sort - > panTro3.bam
+
+cat panTro3.sam | awk '$1 != "Y" && $3 != "Y" {print $0}' > panTro3_noY.sam
+cat panTro3_noY.sam | samtools view -O BAM --reference hg38.fa - | samtools sort - > panTro3_noY.bam
+samtools index panTro3.bam  
+samtools index panTro3_noY.bam
+
+
+samtools depth panTro3.bam | wc -l   # 2919342650
+samtools depth panTro3.bam | awk '$3>0 {print $0}' | wc -l # 2666610412
+
+samtools depth panTro3_noY.bam | wc -l  # 2901540063
+samtools depth panTro3_noY.bam | awk '$3>0 {print $0}' | wc -l  # 2664980985
+samtools mpileup -f hg38.fa panTro3_noY.bam | awk '$5 ~/\./{print $0} ' | wc -l # 2428491395
+
+samtools mpileup panTro3_noY.bam > panTro3_noY.mpileup
+
+perl checkAlignmentForEachBpv3.pl hg38.fa panTro3_noY.mpileup
+MATCH:2625455607
+MISMATCH:39525378
+GAP:236559078
+multiplecovered:0
+```
+
+
+
+Check the number of aligned site of the chain and net pipeline.
+
+```
+wget http://hgdownload.cse.ucsc.edu/goldenpath/hg38/vsPanTro3/hg38.panTro3.synNet.maf.gz
+gunzip hg38.panTro3.synNet.maf.gz
+maf-convert sam hg38.panTro3.synNet.maf | sed 's/hg38.chr//g' | sed 's/panTro3.chr//g' > hg38.panTro3.synNet.sam
+cat hg38.panTro3.synNet.sam | samtools view -O BAM --reference hg38.fa -  | samtools sort - > hg38.panTro3.synNet.bam
+
+cat hg38.panTro3.synNet.sam | awk '$1 != "Y" && $3 != "Y" {print $0}' > hg38.panTro3.synNet_noY.sam
+cat hg38.panTro3.synNet_noY.sam | samtools view -O BAM --reference hg38.fa - | samtools sort - > hg38.panTro3.synNet_noY.bam
+
+samtools depth hg38.panTro3.synNet.bam | wc -l # 2717295976
+samtools depth hg38.panTro3.synNet.bam | awk '$3>0 {print $0}' | wc -l  # 2708393638
+
+samtools depth hg38.panTro3.synNet_noY.bam | wc -l # 2696857040
+samtools depth hg38.panTro3.synNet_noY.bam |awk '$3>0 {print $0}' | wc -l   # 2688062959
+samtools mpileup -f hg38.fa hg38.panTro3.synNet_noY.bam | awk '$5 ~/\./{print $0} ' | wc -l #2411766367
+
+
+
+samtools mpileup hg38.panTro3.synNet_noY.bam > hg38.panTro3.synNet_noY.mpileup
+perl checkAlignmentForEachBpv3.pl hg38.fa hg38.panTro3.synNet_noY.mpileup
+
+#MATCH:2652209351
+#MISMATCH:35853608
+#GAP:8794081
+#multiplecovered:0
+```
+
+
+Those enhancers
+```
+wget http://hgdownload.soe.ucsc.edu/gbdb/hg38/encode3/ccre/encodeCcreCombined.bb
+bigBedToBed encodeCcreCombined.bb encodeCcreCombined.bed
+sed -i -E 's/^chr//g' encodeCcreCombined.bed
+bedtools sort -i encodeCcreCombined.bed | bedtools merge | grep -v "^Y" > encodeCcreCombined_merged.bed
+
+
+samtools depth panTro3_noY.bam -b encodeCcreCombined_merged.bed | wc -l #251204820
+samtools depth panTro3_noY.bam -b encodeCcreCombined_merged.bed | awk '$3>0{print $0}'| wc -l  #245778746
+
+samtools depth hg38.panTro3.synNet_noY.bam -b encodeCcreCombined_merged.bed | wc -l  #245024446
+samtools depth hg38.panTro3.synNet_noY.bam -b encodeCcreCombined_merged.bed | awk '$3>0{print $0}'| wc -l  #244412117
+
+
+perl alignmentToDotplot.pl Homo_sapiens.GRCh38.102.gff3 cds.sam > align.tab
+```
+
+```{r}
+
+
+library(ggplot2)
+library(compiler)
+enableJIT(3)
+library("Cairo")
+
+changetoM <- function ( position ){
+  position=position/1000000;
+  paste(position, "M", sep="")
+}
+
+
+data =read.table("align.tab")
+data=data[which(data$V1 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ,"11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y")),]
+data=data[which(data$V3 %in% c("1", "2A", "2B", "3", "4", "5", "6", "7", "8", "9", "10" ,"11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y")),]
+data$V1 = factor(data$V1, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ,"11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"))
+data$V3 = factor(data$V3, levels=c("1", "2A", "2B", "3", "4", "5", "6", "7", "8", "9", "10" ,"11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"))
+CairoPNG(file="align.png", width = 6400, height = 3200)
+ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=0.5, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 60) +scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    labs(x="panTro3", y="hg38")+
+    theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+	    axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+dev.off()
+
+
+CairoPNG(file="alignchrY.png",width = 600, height = 350)
+data=data[which(data$V1 %in% c( "Y")),]
+data=data[which(data$V3 %in% c("Y")),]
+ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=0.5, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 20) +
+    labs(x="panTro3", y="hg38")+
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+dev.off()
+
+
+
+
+
+data =read.table("panTro3.anchors", head=TRUE)
+data = data[which(data$refChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ,"11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y")),]
+data = data[which(data$queryChr %in% c("1", "2A", "2B", "3", "4", "5", "6", "7", "8", "9", "10" ,"11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y")),]
+data$refChr = factor(data$refChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10" ,"11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"))
+data$queryChr = factor(data$queryChr, levels=c("1", "2A", "2B", "3", "4", "5", "6", "7", "8", "9", "10" ,"11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"))
+
+data$strand = factor(data$strand)
+data = data[which(data$gene != "interanchor"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=2, aes(color=strand), alpha=0.4)+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 60) +
+  labs(x="panTro3", y="hg38")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPNG(file="panTro3.anchors.png", width = 6400, height = 3200)
+p
+dev.off()
+
+```
+
+
+
+
+```{r}
+library(ggplot2)
+dat = read.table("2panTro3Summary", sep="\t", header=TRUE)
+print(dat)
+dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
+dat$proportion = dat$proportion/3031042417
+print(dat)
+p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600"))+ guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+  labs(x="", y="Proportion of human\ngenome aligned to chimpanzee", title="")+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+        legend.position = "top",
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+        
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "genome_aligned"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+```
+
+
+
+
+
+```{r}
+data = read.table("encodeCcreCombined_merged.bed", sep="\t")
+sum(abs(data$V3-data$V2)) #253039693
+
+library(ggplot2)
+dat = read.table("cispanTro3Summary", sep="\t", header=TRUE)
+print(dat)
+dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
+dat$proportion = dat$proportion/253039693
+print(dat)
+p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600"))+ guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+  labs(x="", y="Proportion of human\ncis-regulatory element aligned to chimpanzee", title="")+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+        legend.position = "top",
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+        
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "cre_aligned"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+```
+
+
+
+

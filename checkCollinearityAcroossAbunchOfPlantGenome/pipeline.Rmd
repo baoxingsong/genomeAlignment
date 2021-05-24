@@ -1,0 +1,435 @@
+---
+title: "Investigate the power to identify conlinear blocks of AnchorWave using species with different diversity and whole-genome duplication"
+author: "Baoxing Song"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+```
+
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/gff3/zea_mays/Zea_mays.AGPv4.34.gff3.gz
+gunzip Zea_mays.AGPv4.34.gff3.gz
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-34/fasta/zea_mays/dna/Zea_mays.AGPv4.dna.toplevel.fa.gz
+gunzip Zea_mays.AGPv4.dna.toplevel.fa.gz
+anchorwave gff2seq -r Zea_mays.AGPv4.dna.toplevel.fa -i Zea_mays.AGPv4.34.gff3 -o maize_cds.fa
+minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 Zea_mays.AGPv4.dna.toplevel.fa maize_cds.fa > maize_cds_maize.sam
+
+
+
+wget https://www.genoscope.cns.fr/externe/plants/data/Mschizocarpa_chromosomes.fasta # banana
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Mschizocarpa_chromosomes.fasta maize_cds.fa > maize.banana.sam
+
+
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-49/fasta/solanum_lycopersicum/dna/Solanum_lycopersicum.SL3.0.dna.toplevel.fa.gz # tomato
+gunzip Solanum_lycopersicum.SL3.0.dna.toplevel.fa.gz
+wget https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_gff3/TAIR10_GFF3_genes.gff
+wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr1.fas
+wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr2.fas
+wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr3.fas
+wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr4.fas
+wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr5.fas
+cat TAIR10_chr1.fas TAIR10_chr2.fas TAIR10_chr3.fas TAIR10_chr4.fas TAIR10_chr5.fas > tair10.fa
+rm TAIR10_chr1.fas TAIR10_chr2.fas TAIR10_chr3.fas TAIR10_chr4.fas TAIR10_chr5.fas
+anchorwave gff2seq -r tair10.fa -i TAIR10_GFF3_genes.gff -o tair10_cds.fa
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 tair10.fa tair10_cds.fa > tair10.sam
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Solanum_lycopersicum.SL3.0.dna.toplevel.fa tair10_cds.fa > ara.tomato.sam
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Solanum_lycopersicum.SL3.0.dna.toplevel.fa maize_cds.fa > maize.tomato.sam
+
+
+perl alignmentToDotplot.pl Zea_mays.AGPv4.34.gff3 maize.banana.sam > maize.banana.tab
+perl alignmentToDotplot.pl Zea_mays.AGPv4.34.gff3 maize.tomato.sam > maize.tomato.tab
+perl alignmentToDotplot.pl TAIR10_GFF3_genes.gff ara.tomato.sam >  ara.tomato.tab
+
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-49/fasta/oryza_sativa/dna/Oryza_sativa.IRGSP-1.0.dna.toplevel.fa.gz # rice
+gunzip Oryza_sativa.IRGSP-1.0.dna.toplevel.fa.gz
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Oryza_sativa.IRGSP-1.0.dna.toplevel.fa maize_cds.fa > maize.rice.sam
+perl alignmentToDotplot.pl Zea_mays.AGPv4.34.gff3 maize.rice.sam > maize.rice.tab
+
+
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-49/fasta/theobroma_cacao_matina/dna/Theobroma_cacao_matina.Theobroma_cacao_20110822.dna.toplevel.fa.gz   #chocolate
+gunzip Theobroma_cacao_matina.Theobroma_cacao_20110822.dna.toplevel.fa.gz
+
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Theobroma_cacao_matina.Theobroma_cacao_20110822.dna.toplevel.fa maize_cds.fa > maize.chocolate.sam
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Theobroma_cacao_matina.Theobroma_cacao_20110822.dna.toplevel.fa tair10_cds.fa > ara.chocolate.sam
+perl alignmentToDotplot.pl Zea_mays.AGPv4.34.gff3 maize.chocolate.sam > maize.chocolate.tab
+perl alignmentToDotplot.pl TAIR10_GFF3_genes.gff ara.chocolate.sam > ara.chocolate.tab
+
+
+wget ftp://ftp.ensemblgenomes.org/pub/plants/release-49/fasta/vitis_vinifera/dna/Vitis_vinifera.12X.dna.toplevel.fa.gz # grape
+gunzip Vitis_vinifera.12X.dna.toplevel.fa.gz
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Vitis_vinifera.12X.dna.toplevel.fa maize_cds.fa > maize.grape.sam
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Vitis_vinifera.12X.dna.toplevel.fa tair10_cds.fa > ara.grape.sam
+perl alignmentToDotplot.pl Zea_mays.AGPv4.34.gff3 maize.grape.sam > maize.grape.tab
+perl alignmentToDotplot.pl TAIR10_GFF3_genes.gff ara.grape.sam > ara.grape.tab
+
+```
+
+Generate plots
+```{r warning=FALSE, fig.height = 80, fig.width = 120}
+library(ggplot2)
+library(compiler)
+enableJIT(3)
+library("Cairo")
+changetoM <- function ( position ){
+  position=position/1000000;
+  paste(position, "M", sep="")
+}
+data =read.table("maize.banana.tab")
+data$V1 = paste("chr", data$V1, sep="")
+data = data[which(data$V1 %in% c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10")),]
+data = data[which(data$V3 %in% c("chr01", "chr02", "chr03", "chr04", "chr05", "chr06", "chr07", "chr08", "chr09", "chr10", "chr11")),]
+data$V1 = factor(data$V1, levels=c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10" ))
+data$V3 = factor(data$V3, levels=c("chr01", "chr02", "chr03", "chr04", "chr05", "chr06", "chr07", "chr08", "chr09", "chr10", "chr11" ))
+p = ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=4, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 120) +
+    labs(x="banana", y="maize")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="maize.banana.png",width = 9600, height = 4160)
+p
+dev.off()
+
+
+
+data =read.table("maize.rice.tab")
+data$V1 = paste("chr", data$V1, sep="")
+data = data[which(data$V1 %in% c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10")),]
+data = data[which(data$V3 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")),]
+data$V1 = factor(data$V1, levels=c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10" ))
+data$V3 = factor(data$V3, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"))
+p = ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=4, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 120) +
+    labs(x="rice", y="maize")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="maize.rice.png",width = 9600, height = 4160)
+p
+dev.off()
+
+
+data =read.table("maize.tomato.tab")
+data$V1 = paste("chr", data$V1, sep="")
+data = data[which(data$V1 %in% c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10")),]
+data = data[which(data$V3 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")),]
+data$V1 = factor(data$V1, levels=c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10" ))
+data$V3 = factor(data$V3, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"))
+p = ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=4, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 120) +
+    labs(x="tomato", y="maize")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="maize.tomato.png",width = 9600, height = 4160)
+p
+dev.off()
+
+
+data =read.table("ara.tomato.tab")
+data = data[which(data$V1 %in% c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5")),]
+data = data[which(data$V3 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")),]
+data$V1 = factor(data$V1, levels=c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5" ))
+data$V3 = factor(data$V3, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"))
+p = ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=4, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 120) +
+    labs(x="tomato", y="arabidopsis")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="ara.tomato.png",width = 9600, height = 4160)
+p
+dev.off()
+
+
+
+
+data =read.table("ara.chocolate.tab")
+data = data[which(data$V1 %in% c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5")),]
+data = data[which(data$V3 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10")),]
+data$V1 = factor(data$V1, levels=c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5" ))
+data$V3 = factor(data$V3, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"))
+p = ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=4, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 120) +
+    labs(x="chocolate", y="arabidopsis")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="ara.chocolate.png",width = 9600, height = 4160)
+p
+dev.off()
+
+
+
+data =read.table("maize.chocolate.tab")
+data$V1 = paste("chr", data$V1, sep="")
+data = data[which(data$V1 %in% c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10")),]
+data = data[which(data$V3 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10")),]
+data$V1 = factor(data$V1, levels=c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10"))
+data$V3 = factor(data$V3, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"))
+p = ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=4, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 120) +
+    labs(x="chocolate", y="maize")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="maize.chocolate.png",width = 9600, height = 4160)
+p
+dev.off()
+
+
+
+
+data =read.table("ara.grape.tab")
+data = data[which(data$V1 %in% c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5")),]
+data = data[which(data$V3 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19")),]
+data$V1 = factor(data$V1, levels=c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5" ))
+data$V3 = factor(data$V3, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"))
+p = ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=4, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 120) +
+    labs(x="grape", y="arabidopsis")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="ara.grape.png",width = 9600, height = 4160)
+p
+dev.off()
+
+
+
+data =read.table("maize.grape.tab")
+data$V1 = paste("chr", data$V1, sep="")
+data = data[which(data$V1 %in% c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10")),]
+data = data[which(data$V3 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19")),]
+data$V1 = factor(data$V1, levels=c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10"))
+data$V3 = factor(data$V3, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"))
+p = ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=4, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 120) +
+    labs(x="grape", y="maize")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPNG(file="maize.grape.png", width = 9600, height = 4160)
+p
+dev.off()
+
+
+```
+
+
+ 
+
+```
+anchorwave proali -i Zea_mays.AGPv4.34.gff3 -r Zea_mays.AGPv4.dna.toplevel.fa -as maize_cds.fa -a maize.rice.sam -ar maize_cds_maize.sam -s Oryza_sativa.IRGSP-1.0.dna.toplevel.fa -n B73_rice.anchorspro -ns -R 1 -Q 2
+anchorwave proali -i Zea_mays.AGPv4.34.gff3 -r Zea_mays.AGPv4.dna.toplevel.fa -as maize_cds.fa -a maize.banana.sam -ar maize_cds_maize.sam -s Mschizocarpa_chromosomes.fasta maize.cds.fa -n B73_banana.anchorspro -ns -R 8 -Q 8
+
+anchorwave proali -i TAIR10_GFF3_genes.gff -r tair10.fa -as tair10_cds.fa -a ara.grape.sam -ar tair10.sam -s Vitis_vinifera.12X.dna.toplevel.fa -n ara_grape.anchorspro -ns -R 1 -Q 4
+anchorwave proali -i TAIR10_GFF3_genes.gff -r tair10.fa -as tair10_cds.fa -a ara.tomato.sam -ar tair10.sam -s Solanum_lycopersicum.SL3.0.dna.toplevel.fa -n ara_tomato.anchorspro -ns -R 3 -Q 4
+
+anchorwave proali -i TAIR10_GFF3_genes.gff -r tair10.fa -as tair10_cds.fa -a ara.chocolate.sam -ar tair10.sam -s Theobroma_cacao_matina.Theobroma_cacao_20110822.dna.toplevel.fa -n ara_chocolate.anchorspro -ns -R 1 -Q 4
+
+
+
+grep -v "#" B73_rice.anchorspro | awk '{print $1"\t"$2"\t"$3}'| tail -n +2 | awk '$3>$2'  > B73_rice.anchorspro.bed
+bedtools sort -i B73_rice.anchorspro.bed > B73_rice.anchorspro_sort.bed
+bedtools merge -i B73_rice.anchorspro_sort.bed > B73_rice.anchorspro_sort_merge.bed
+
+
+grep -v "#" ara_grape.anchorspro | awk '{print $1"\t"$2"\t"$3}'| tail -n +2  > ara_grape.anchorspro.bed
+bedtools sort -i ara_grape.anchorspro.bed > ara_grape.anchorspro_sort.bed
+bedtools merge -i ara_grape.anchorspro_sort.bed > ara_grape.anchorspro_sort_merge.bed
+
+grep -v "#" ara_tomato.anchorspro | awk '{print $1"\t"$2"\t"$3}' | tail -n +2 > ara_tomato.anchorspro.bed
+bedtools sort -i ara_tomato.anchorspro.bed > ara_tomato.anchorspro_sort.bed
+bedtools merge -i ara_tomato.anchorspro_sort.bed > ara_tomato.anchorspro_sort_merge.bed
+
+grep -v "#" B73_banana.anchorspro | awk '{print $1"\t"$2"\t"$3}' | tail -n +2 | awk '$3>$2' > B73_banana.anchorspro.bed
+bedtools sort -i B73_banana.anchorspro.bed > B73_banana.anchorspro_sort.bed
+bedtools merge -i B73_banana.anchorspro_sort.bed > B73_banana.anchorspro_sort_merge.bed
+
+
+grep -v "#" ara_chocolate.anchorspro | awk '{print $1"\t"$2"\t"$3}' | tail -n +2 | awk '$3>$2' > ara_chocolate.anchorspro.bed
+bedtools sort -i ara_chocolate.anchorspro.bed > ara_chocolate.anchorspro_sort.bed
+bedtools merge -i ara_chocolate.anchorspro_sort.bed > ara_chocolate.anchorspro_sort_merge.bed
+
+
+```
+
+```{r warning=FALSE, fig.height = 80, fig.width = 120}
+data =read.table("B73_rice.anchorspro", head=TRUE)
+data$refChr = paste("chr", data$refChr, sep="")
+data = data[which(data$refChr %in% c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10")),]
+data = data[which(data$queryChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")),]
+data$refChr = factor(data$refChr, levels=c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10"))
+data$queryChr = factor(data$queryChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"))
+
+data$strand = factor(data$strand)
+data = data[which(data$gene != "interanchor"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=4, aes(color=strand))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 120) +
+  labs(x="rice", y="maize")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPNG(file="B73_rice.anchorspro.png", width = 9600, height = 4160)
+p
+dev.off()
+
+
+data =read.table("ara_grape.anchorspro", head=TRUE)
+data = data[which(data$refChr %in% c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5")),]
+data = data[which(data$queryChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19")),]
+data$refChr = factor(data$refChr, levels=c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5"))
+data$queryChr = factor(data$queryChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"))
+data$length = abs(data$referenceEnd-data$referenceStart) + 1
+sum(data$length)
+#65M that is long enough
+data$strand = factor(data$strand)
+data = data[which(data$gene != "interanchor"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=4, aes(color=strand))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 120) +
+  labs(x="grape", y="arabidopsis")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPNG(file="ara_grape.anchorspro.png", width = 9600, height = 4160)
+p
+dev.off()
+
+
+
+
+
+
+
+
+data =read.table("B73_banana.anchorspro", head=TRUE)
+data$refChr = paste("chr", data$refChr, sep="")
+data = data[which(data$refChr %in% c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10")),]
+data = data[which(data$queryChr %in% c("chr01", "chr02", "chr03", "chr04", "chr05", "chr06", "chr07", "chr08", "chr09", "chr10", "chr11")),]
+data$refChr = factor(data$refChr, levels=c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10"))
+data$queryChr = factor(data$queryChr, levels=c("chr01", "chr02", "chr03", "chr04", "chr05", "chr06", "chr07", "chr08", "chr09", "chr10", "chr11"))
+data$length = abs(data$referenceEnd-data$referenceStart) + 1
+sum(data$length)
+#65M that is long enough
+data$strand = factor(data$strand)
+data = data[which(data$gene != "interanchor"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=4, aes(color=strand))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 120) +
+  labs(x="banana", y="maize")+ scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPNG(file="B73_banana.anchorspro.png", width = 9600, height = 4160)
+p
+dev.off()
+
+
+data =read.table("ara_tomato.anchorspro", head=TRUE)
+data = data[which(data$refChr %in% c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5")),]
+data = data[which(data$queryChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")),]
+data$refChr = factor(data$refChr, levels=c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5"))
+data$queryChr = factor(data$queryChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"))
+data$length = abs(data$referenceEnd-data$referenceStart) + 1
+sum(data$length)
+#65M that is long enough
+data$strand = factor(data$strand)
+data = data[which(data$gene != "interanchor"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=4, aes(color=strand))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 120) +
+  labs(x="tomato", y="arabidopsis")+ scale_x_continuous(labels=changetoM, limits=c(0, NA)) + scale_y_continuous(labels=changetoM, limits=c(0, NA)) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPNG(file="ara_tomato.anchorspro.png", width = 9600, height = 4160)
+p
+dev.off()
+
+
+data =read.table("ara_chocolate.anchorspro", head=TRUE)
+data = data[which(data$refChr %in% c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5")),]
+data = data[which(data$queryChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10")),]
+data$refChr = factor(data$refChr, levels=c("Chr1", "Chr2", "Chr3", "Chr4", "Chr5"))
+data$queryChr = factor(data$queryChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"))
+data$length = abs(data$referenceEnd-data$referenceStart) + 1
+sum(data$length)
+data$strand = factor(data$strand)
+data = data[which(data$gene != "interanchor"),]
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=4, aes(color=strand))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 120) +
+  labs(x="chocolate", y="arabidopsis")+ scale_x_continuous(labels=changetoM, limits=c(0, NA)) + scale_y_continuous(labels=changetoM, limits=c(0, NA)) +
+  theme(axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill=NA,color="black", size=1, linetype="solid"),
+        axis.text.y = element_text( colour = "black"),
+        legend.position='none',
+        axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPNG(file="ara_chocolate.anchorspro.png", width = 9600, height = 4160)
+p
+dev.off()
+
+
+
+
+
+d = read.table("ara_grape.anchorspro_sort_merge.bed")
+d$length = abs(d$V3-d$V2) + 1
+sum(d$length)
+
+
+d = read.table("ara_tomato.anchorspro_sort_merge.bed")
+d$length = abs(d$V3-d$V2) + 1
+sum(d$length)
+
+
+d = read.table("B73_banana.anchorspro_sort_merge.bed")
+d$length = abs(d$V3-d$V2) + 1
+sum(d$length)
+
+d = read.table("B73_rice.anchorspro_sort_merge.bed")
+d$length = abs(d$V3-d$V2) + 1
+sum(d$length)
+
+d = read.table("ara_chocolate.anchorspro_sort_merge.bed")
+d$length = abs(d$V3-d$V2) + 1
+sum(d$length)
+
+
+```
+
+

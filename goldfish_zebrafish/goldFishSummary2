@@ -1,0 +1,22 @@
+approach	proportion	category
+minimap2_asm5	7380	gap
+minimap2_asm5	1344959	position match
+minimap2_asm5	1370367044	unaligned
+minimap2_asm10	77766	gap
+minimap2_asm10	6326191	position match
+minimap2_asm10	1365315426	unaligned
+minimap2_asm20	877033	gap
+minimap2_asm20	34973788	position match
+minimap2_asm20	1335868562	unaligned
+AnchorWave	863424073	gap
+AnchorWave	270623589	position match
+AnchorWave	237671721	unaligned
+MUMmer4	1072018	gap
+MUMmer4	93307218	position match
+MUMmer4	1277340147	unaligned
+LAST+one-to-one	3071519	gap
+LAST+one-to-one	260653540	position match
+LAST+one-to-one	1107994324	unaligned
+GSAlign	483835	gap
+GSAlign	19590370	position match
+GSAlign	1351645178	unaligned

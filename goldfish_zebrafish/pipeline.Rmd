@@ -1,0 +1,693 @@
+---
+title: ""
+author: "Baoxing Song"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+
+Here, we are trying to explain and demonstrate how to use the ProAli to align the goldfish genome assembly against the zebrafish reference genome.\
+Firstly, we prepare the input files, the zebrafish reference genomes in fasta format, the zebrafish reference genome annotation in gff(3) format, and the goldfish query genome file in fasta format.
+
+# Download the maize genome sequence and reference GFF file
+```
+wget http://ftp.ensembl.org/pub/release-91/fasta/danio_rerio/dna/Danio_rerio.GRCz10.dna.toplevel.fa.gz
+wget http://ftp.ensembl.org/pub/release-91/gff3/danio_rerio/Danio_rerio.GRCz10.91.chr.gff3.gz
+wget https://research.nhgri.nih.gov/goldfish/download/carAur01.sm.fa
+gunzip *gz
+```
+
+
+# Check the collinearity and whole-genome duplication for genomes under comparing
+Since the ProAli use collinearity blocks and whole genome duplications to guide the genome alignment.\n
+Before running the alignment, we use minimap2 to map reference full-length CDS to query genome, visualize the mapping and get ideas about the collinearity and whole-genome duplication.
+
+## Overview the genome assemblies
+firstly I indexed the genome files using samtools faidx command
+```
+samtools faidx carAur01.sm.fa
+samtools faidx Danio_rerio.GRCz10.dna.toplevel.fa
+```
+Then we check the name and sequence length for each sequence record manually. \
+Then we roughly know they are chromosome level genome assemblies(not contig level). \
+To check collinearity and whole-genome duplication, we only need to focus on chromosomes. \
+They are ```"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "MT"``` for "Branchiostoma_lanceolatum.BraLan2.dna.toplevel.fa"\
+and ```"LG1","LG2","LG3", "LG4", "LG5", "LG6", "LG7", "LG8", "LG9", "LG10", "LG11", "LG12", "LG13", "LG14", "LG15", "LG16", "LG17", "LG18", "LG19", "LG20", "LG21", "LG22", "LG23", "LG24", "LG25", "LG26", "LG27", "LG28", "LG28B", "LG29",  "LG30", "LG30F", "LG31", "LG32", "LG33", "LG34", "LG35", "LG36", "LG36F", "LG37", "LG37M", "LG38", "LG39",  "LG40", "LG41", "LG42", "LG42F", "LG43", "LG44", "LG44F", "LG45", "LG45M", "LG46", "LG47", "LG48", "LG48F", "LG49", "LG49B", "LG50"``` carAur01.sm.fa
+
+since other contigs maight be unclasped heterozygous regions, we only keep chrosomes
+```
+head -15923983 carAur01.sm.fa > goldfish.fa
+```
+
+\
+\
+
+## Get full-length CDS in fasta format
+NOTE: please do NOT use CDS extracted using other software. Since AnchorWave filtered some CDS records to minimum the side effect of minimap2 limitation that "Minimap2 often misses small exons" (https://github.com/lh3/minimap2#limitations)
+```
+anchorwave gff2seq -r Danio_rerio.GRCz10.dna.toplevel.fa -i Danio_rerio.GRCz10.91.chr.gff3 -o cds.fa
+anchorwave gff2seq -r Danio_rerio.GRCz10.dna.toplevel.fa -i Danio_rerio.GRCz10.91.chr.gff3 -x -o cdsx.fa
+```
+
+
+
+## Use minimap2 to map the extracted full-length CDS to the reference and query genomes
+```
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Danio_rerio.GRCz10.dna.toplevel.fa cds.fa > ref.sam
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 goldfish.fa cds.fa > carAur.sam
+
+minimap2 -x splice -t 60 -k 12 -a -p 0.4 -N 200 Danio_rerio.GRCz10.dna.toplevel.fa cdsx.fa > refx.sam
+minimap2 -x splice -t 60 -k 12 -a -p 0.4 -N 200 goldfish.fa cdsx.fa > carAurx.sam
+```
+
+## Visualize the full-length CDS mapping result
+```
+perl alignmentToDotplot.pl Danio_rerio.GRCz10.91.chr.gff3 carAur.sam > carAur.tab
+```
+
+
+```{r warning=FALSE, fig.height = 87.5, fig.width = 150}
+library(ggplot2)
+library(compiler)
+enableJIT(3)
+library(ggplot2)
+library("Cairo")
+
+
+changetoM <- function ( position ){
+  position=position/1000000;
+  paste(position, "M", sep="")
+}
+
+
+data =read.table("carAur.tab")
+data = data[which(data$V1 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "MT" )),]
+data = data[which(data$V3 %in% c("LG1","LG2","LG3", "LG4", "LG5", "LG6", "LG7", "LG8", "LG9", "LG10", "LG11", "LG12", "LG13", "LG14", "LG15", "LG16", "LG17", "LG18", "LG19", "LG20", "LG21", "LG22", "LG23", "LG24", "LG25", "LG26", "LG27", "LG28", "LG28B", "LG29",  "LG30", "LG30F", "LG31", "LG32", "LG33", "LG34", "LG35", "LG36", "LG36F", "LG37", "LG37M", "LG38", "LG39",  "LG40", "LG41", "LG42", "LG42F", "LG43", "LG44", "LG44F", "LG45", "LG45M", "LG46", "LG47", "LG48", "LG48F", "LG49", "LG49B", "LG50")),]
+data$V1 = factor(data$V1, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "MT" ))
+data$V3 = factor(data$V3, levels=c("LG1","LG2","LG3", "LG4", "LG5", "LG6", "LG7", "LG8", "LG9", "LG10", "LG11", "LG12", "LG13", "LG14", "LG15", "LG16", "LG17", "LG18", "LG19", "LG20", "LG21", "LG22", "LG23", "LG24", "LG25", "LG26", "LG27", "LG28", "LG28B", "LG29",  "LG30", "LG30F", "LG31", "LG32", "LG33", "LG34", "LG35", "LG36", "LG36F", "LG37", "LG37M", "LG38", "LG39",  "LG40", "LG41", "LG42", "LG42F", "LG43", "LG44", "LG44F", "LG45", "LG45M", "LG46", "LG47", "LG48", "LG48F", "LG49", "LG49B", "LG50" ))
+p = ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=1, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 60) +
+    labs(x="goldfish", y="zebrafish")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPNG(file="carAur.png",width = 12000, height = 7000)
+p
+dev.off()
+
+```
+
+
+## Using ProAli to identify collinear region and plot collinear anchors
+Considering the genome duplication and translocation variations, we use the `proali` function to identify collinear region. \
+We expect the genome alignment coverage on reference genome (zebrafish) equal with or smaller than 2. We expect the genome alignment coverage on query genome (goldsifh) equal with or smaller than 1. So we set parameter -R 2 -Q 1 \n
+As this stage we would like to identify collinear anchors and do not perform base-pair resolution sequence alignment. So we only set -n to output collinear anchors. By setting -ns , we do not would like to identify novel anchors.
+
+```
+anchorwave proali -i Danio_rerio.GRCz10.91.chr.gff3 -r Danio_rerio.GRCz10.dna.toplevel.fa -a carAur.sam -as cds.fa -ar ref.sam -s goldfish.fa -n align1.anchors -R 2 -Q 1 -e 100 -y 0.9
+```
+
+
+```{r}
+library(ggplot2)
+library(compiler)
+enableJIT(3)
+library(ggplot2)
+library("Cairo")
+
+
+changetoM <- function ( position ){
+  position=position/1000000;
+  paste(position, "M", sep="")
+}
+
+data =read.table("align2.anchors", head=TRUE)
+data[which((data$referenceEnd - data$referenceStart) > 3555885),]
+data =read.table("align1.anchors", head=TRUE)
+data[which((data$referenceEnd - data$referenceStart) > 1555885),]
+
+
+data = data[which(data$refChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "MT" )),]
+data = data[which(data$queryChr %in% c("LG1","LG2","LG3", "LG4", "LG5", "LG6", "LG7", "LG8", "LG9", "LG10", "LG11", "LG12", "LG13", "LG14", "LG15", "LG16", "LG17", "LG18", "LG19", "LG20", "LG21", "LG22", "LG23", "LG24", "LG25", "LG26", "LG27", "LG28", "LG28B", "LG29",  "LG30", "LG30F", "LG31", "LG32", "LG33", "LG34", "LG35", "LG36", "LG36F", "LG37", "LG37M", "LG38", "LG39",  "LG40", "LG41", "LG42", "LG42F", "LG43", "LG44", "LG44F", "LG45", "LG45M", "LG46", "LG47", "LG48", "LG48F", "LG49", "LG49B", "LG50")),]
+data$refChr = factor(data$refChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "MT" ))
+data$queryChr = factor(data$queryChr, levels=c("LG1","LG2","LG3", "LG4", "LG5", "LG6", "LG7", "LG8", "LG9", "LG10", "LG11", "LG12", "LG13", "LG14", "LG15", "LG16", "LG17", "LG18", "LG19", "LG20", "LG21", "LG22", "LG23", "LG24", "LG25", "LG26", "LG27", "LG28", "LG28B", "LG29",  "LG30", "LG30F", "LG31", "LG32", "LG33", "LG34", "LG35", "LG36", "LG36F", "LG37", "LG37M", "LG38", "LG39",  "LG40", "LG41", "LG42", "LG42F", "LG43", "LG44", "LG44F", "LG45", "LG45M", "LG46", "LG47", "LG48", "LG48F", "LG49", "LG49B", "LG50" ))
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=1, aes(color=strand))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 60) +
+    labs(x="goldfish", y="zebrafish")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+CairoPNG(file="align1.anchors.png",width = 12000, height = 7000)
+p
+dev.off()
+
+```
+
+# Perform genome alignment
+Here we set scoring parameters -B -O1 -E1 -O2, to compare the alignment result of using different scoring parameters. \
+Using the wavefront alignment (WFA) algorithm, the match score is constantly set as 0. Empirically, we always set -E2 as -1. \
+We set -w, and -fa3 to minimum the usage of sliding window alignment approach and novel anchors. Those parameter would improve the alignment while cost memory than the default parameters. \
+With the following setting, each thread could cost as high as 50 Gb memory, and we ran this command on a computer with 512Gb memory available with 10 threads. \
+
+```
+
+/usr/bin/time anchorwave proali -i Danio_rerio.GRCz10.91.chr.gff3 -r Danio_rerio.GRCz10.dna.toplevel.fa -a carAurx.sam -as cdsx.fa -ar refx.sam -s goldfish.fa -n align1x.anchors -o align1x.maf -t 18 -R 2 -Q 1 -B -4 -O1 -4 -E1 -2 -O2 -80 -E2 -1 -f align1x.f.maf -w 38000 -fa3 200000 -e 100 -y 0.9 -x > fishlog1x 2>&1
+
+/usr/bin/time anchorwave proali -i Danio_rerio.GRCz10.91.chr.gff3 -r Danio_rerio.GRCz10.dna.toplevel.fa -a carAur.sam -as cds.fa -ar ref.sam -s goldfish.fa -n align2.anchors -o align2.maf -t 18 -R 2 -Q 1 -B -4 -O1 -4 -E1 -2 -O2 -80 -E2 -1 -f align2.f.maf -w 38000 -fa3 200000 > fishlog2 2>&1
+
+```
+
+
+
+Supplemental Table 5. List of 436,035 representative ATAC-seq peak.txt is from https://www.nature.com/articles/s41586-020-2962-9
+
+and rename it to cre.bed
+
+```
+maf-convert sam align2.maf | sed 's/Danio_rerio.GRCz10.dna.toplevel.fa.//g' | sed 's/goldfish.fa.//g' | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > align.bam
+samtools depth align.bam | wc -l #1153540276
+samtools depth align.bam | awk '$3>0{print $0}' | wc -l # 257702222
+
+sed -i -E 's/^chr//g' cre.bed
+bedtools sort -i cre.bed | bedtools merge > cre_uniq.bed
+samtools depth -b cre_uniq.bed align.bam | wc -l #188135623
+samtools depth -b cre_uniq.bed align.bam | awk '$3>0{print $0}' | wc -l #79651099
+
+
+
+maf-convert sam align1.maf | sed 's/Danio_rerio.GRCz10.dna.toplevel.fa.//g' | sed 's/goldfish.fa.//g' | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > align1.bam
+samtools index align1.bam
+samtools depth align1.bam | wc -l #1134047662
+samtools depth align1.bam | awk '$3>0{print $0}' | wc -l # 270623589
+samtools depth -b cre_uniq.bed align1.bam | wc -l #191281289
+samtools depth -b cre_uniq.bed align1.bam | awk '$3>0{print $0}' | wc -l #83623771
+
+
+```
+
+
+```(checked)
+minimap2 -x asm5 -t 20 -a Danio_rerio.GRCz10.dna.toplevel.fa goldfish.fa > minimap2_goldfish_5.sam &
+minimap2 -x asm10 -t 20 -a Danio_rerio.GRCz10.dna.toplevel.fa goldfish.fa > minimap2_goldfish_10.sam &
+minimap2 -x asm20 -t 20 -a Danio_rerio.GRCz10.dna.toplevel.fa goldfish.fa > minimap2_goldfish_20.sam &
+
+samtools sort minimap2_goldfish_5.sam > minimap2_goldfish_5.bam
+samtools sort minimap2_goldfish_10.sam > minimap2_goldfish_10.bam
+samtools sort minimap2_goldfish_20.sam > minimap2_goldfish_20.bam
+
+samtools depth minimap2_goldfish_5.bam | wc -l   #1352339
+samtools depth minimap2_goldfish_10.bam | wc -l   #6403957
+samtools depth minimap2_goldfish_20.bam | wc -l   #35850821
+
+samtools depth minimap2_goldfish_5.bam | awk '$3>0{print $0}' | wc -l # 1344959
+samtools depth minimap2_goldfish_10.bam | awk '$3>0{print $0}' | wc -l # 6326191
+samtools depth minimap2_goldfish_20.bam | awk '$3>0{print $0}' | wc -l # 34973788
+
+
+```
+
+
+
+
+
+```
+lastdb -P0 zebrafish Danio_rerio.GRCz10.dna.toplevel.fa
+faToTwoBit Danio_rerio.GRCz10.dna.toplevel.fa zebrafish.2bit
+faSize -detailed Danio_rerio.GRCz10.dna.toplevel.fa > zebrafish.size
+lastal -P 60 zebrafish goldfish.fa > goldfish_lastal.maf
+faSize -detailed goldfish.fa > goldfish.size
+faToTwoBit goldfish.fa goldfish.2bit
+python2 /programs/last-932/bin/maf-convert psl goldfish_lastal.maf > goldfish_lastal.psl
+
+axtChain -linearGap=loose -psl goldfish_lastal.psl -faQ -faT Danio_rerio.GRCz10.dna.toplevel.fa goldfish.fa goldfish.fa goldfish_lastal.chain
+chainMergeSort goldfish_lastal.chain > goldfish_lastal.all.chain
+chainPreNet goldfish_lastal.all.chain zebrafish.size goldfish.size goldfish_lastal.preNet
+chainNet goldfish_lastal.preNet zebrafish.size goldfish.size goldfish_lastal.refTarget.net goldfish_lastal.chainNet
+netToAxt goldfish_lastal.refTarget.net goldfish_lastal.preNet zebrafish.2bit goldfish.2bit stdout | axtSort stdin goldfish_lastal.axt
+axtToMaf goldfish_lastal.axt zebrafish.size goldfish.size goldfish_lastal_final.maf -qPrefix=query. -tPrefix=col.
+
+perl lastFinalToSplit.pl goldfish_lastal_final.maf > goldfish_lastal_final_forsplit.maf
+cat goldfish_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > goldfish_lastal_final_split.maf
+
+maf-convert sam goldfish_lastal.maf| samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa goldfish.fa - | samtools sort - > goldfish_lastal.bam  #many-to-many
+maf-convert sam goldfish_lastal_final.maf| sed 's/col.//g' | sed 's/query.//g' | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa goldfish.fa - | samtools sort - > goldfish_lastal_final.bam # many to one
+maf-convert sam goldfish_lastal_final_split.maf | sed 's/col.//g' | sed 's/query.//g' | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa goldfish.fa - | samtools sort - > goldfish_lastal_final_split.bam
+
+
+
+samtools index goldfish_lastal.bam
+samtools index goldfish_lastal_final.bam
+samtools index goldfish_lastal_split.bam
+samtools index goldfish_lastal_final_split.bam
+
+samtools depth goldfish_lastal.bam | wc -l   #628324746
+samtools depth goldfish_lastal_split.bam | wc -l   #210589780
+samtools depth goldfish_lastal_final.bam | wc -l   #556518096
+samtools depth goldfish_lastal_final_split.bam | wc -l   #252695645
+
+
+samtools depth goldfish_lastal.bam | awk '$3>0{print $0}' | wc -l # 624893762
+samtools depth goldfish_lastal_split.bam | awk '$3>0{print $0}' | wc -l # 207926386
+samtools depth goldfish_lastal_final.bam | awk '$3>0{print $0}' | wc -l # 547064597
+samtools depth goldfish_lastal_final_split.bam | awk '$3>0{print $0}'| wc -l # 248353893
+
+```
+
+
+
+
+## perform genome alignment using MUMmer4 (https://mummer4.github.io/) and summarize the result
+```
+nucmer -t 75 --sam-long=mumer.goldfish.short.sam Danio_rerio.GRCz10.dna.toplevel.fa goldfish.fa
+cat mumer.goldfish.short.sam | grep -v "@" | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > mumer.goldfish.short.bam
+samtools index mumer.goldfish.short.bam
+samtools depth mumer.goldfish.short.bam | wc -l   # 94867701
+samtools depth mumer.goldfish.short.bam | awk '$3>0{print $0}' | wc -l   # 93794614
+```
+
+
+
+## perform genome alignment using GSAlign(https://github.com/hsinnan75/GSAlign) and summarize the result
+```
+GSAlign -r Danio_rerio.GRCz10.dna.toplevel.fa -q goldfish.fa -t 18 -o goldfish_gsalign -fmt 1
+python2 /programs/last-932/bin/maf-convert sam goldfish_gsalign.maf | sed 's/qry.//g' | sed 's/ref.//g' | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > goldfish_gsalign.bam
+
+samtools index goldfish_gsalign.bam
+samtools depth goldfish_gsalign.bam | wc -l # 20057144
+samtools depth goldfish_gsalign.bam | awk '$3>0{print $0}' | wc -l # 19573408
+
+```
+
+
+<!-- ```{r} -->
+<!-- d = read.table("cre_uniq.bed") -->
+<!-- sum(abs(d$V3-d$V2)) -->
+
+<!-- genomesize = read.table("Danio_rerio.GRCz10.dna.toplevel.fa.fai") -->
+<!-- genomesize = sum(genomesize$V2) -->
+
+
+<!-- library(ggplot2) -->
+<!-- dat = read.table("goldFishSummary", sep="\t", header=TRUE) -->
+<!-- dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match")) -->
+<!-- dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20", "LAST+many-to-many", "LAST+many-to-one", "LAST+one-to-one", "MUMmer4", "GSAlign")) -->
+
+<!-- dat$proportion = dat$proportion/genomesize -->
+<!-- p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  +  scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+ -->
+<!--   labs(x="", y="Genome porportion", title="")+ -->
+<!-- 	    	theme_bw() +theme_grey(base_size = 24) + theme( -->
+<!--         strip.background = element_blank(), -->
+<!--         strip.text.x = element_blank(), -->
+<!--         legend.title = element_blank(), -->
+<!-- 	    	  axis.line = element_blank(), -->
+<!--         legend.position = "top", -->
+<!-- 	        panel.grid.major = element_blank(), -->
+<!-- 	        panel.grid.minor = element_blank(), -->
+<!-- 	        panel.border = element_blank(), -->
+
+<!-- 	        panel.background = element_blank(), -->
+<!-- 	        axis.text.y = element_text( colour = "black"), -->
+<!-- 	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black")) -->
+
+<!-- print(p) -->
+<!-- file = "genome_aligned" -->
+<!-- png(paste(file, ".png", sep=""), width=720, height=560) -->
+<!-- print(p) -->
+<!-- dev.off() -->
+
+<!-- pdf(paste(file, ".pdf", sep=""), width=9, height=7) -->
+<!-- print(p) -->
+<!-- dev.off() -->
+
+
+<!-- d = read.table("goldfish.fa.fai") -->
+<!-- sum(d$V2)/1000/1000/1000 # 1.273912 -->
+
+<!-- d = read.table("Danio_rerio.GRCz10.dna.toplevel.fa.fai") -->
+<!-- d = head(d, 25) -->
+<!-- sum(d$V2)/1000/1000/1000 # 1.340431 -->
+<!-- ``` -->
+
+
+
+
+Then we splite int goldfish genome into two subgenomes using SeqKit https://github.com/shenwei356/seqkit
+
+
+```
+seqkit grep -n -p LG1 goldfish.fa > goldfish1.fa
+seqkit grep -n -p LG2 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG3 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG4 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG5 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG6 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG7 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG8 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG9 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG10 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG11 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG12 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG13 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG14 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG15 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG16 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG17 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG18 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG19 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG20 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG21 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG22 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG23 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG24 goldfish.fa >> goldfish1.fa
+seqkit grep -n -p LG25 goldfish.fa >> goldfish1.fa
+
+seqkit grep -n -p LG26 goldfish.fa > goldfish2.fa
+seqkit grep -n -p LG27 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG28 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG28B goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG29 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG30 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG30F goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG31 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG32 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG33 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG34 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG35 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG36 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG36F goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG37 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG37M goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG38 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG39 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG40 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG41 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG42 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG42F goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG43 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG44 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG44F goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG45 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG45M goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG46 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG47 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG48 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG48F goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG49 goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG49B goldfish.fa >> goldfish2.fa
+seqkit grep -n -p LG50 goldfish.fa >> goldfish2.fa
+
+```
+
+
+
+
+
+```(CHECK)
+minimap2 -x asm5 -t 60 -a Danio_rerio.GRCz10.dna.toplevel.fa goldfish1.fa > minimap2_goldfish1_5.sam
+minimap2 -x asm10 -t 60 -a Danio_rerio.GRCz10.dna.toplevel.fa goldfish1.fa > minimap2_goldfish1_10.sam
+minimap2 -x asm20 -t 60 -a Danio_rerio.GRCz10.dna.toplevel.fa goldfish1.fa > minimap2_goldfish1_20.sam
+
+minimap2 -x asm5 -t 60 -a Danio_rerio.GRCz10.dna.toplevel.fa goldfish2.fa > minimap2_goldfish2_5.sam
+minimap2 -x asm10 -t 60 -a Danio_rerio.GRCz10.dna.toplevel.fa goldfish2.fa > minimap2_goldfish2_10.sam
+minimap2 -x asm20 -t 60 -a Danio_rerio.GRCz10.dna.toplevel.fa goldfish2.fa > minimap2_goldfish2_20.sam
+
+
+
+
+samtools sort minimap2_goldfish1_5.sam > minimap2_goldfish1_5.bam
+samtools sort minimap2_goldfish1_10.sam > minimap2_goldfish1_10.bam
+samtools sort minimap2_goldfish1_20.sam > minimap2_goldfish1_20.bam
+
+samtools depth minimap2_goldfish1_5.bam | wc -l   # 1093612
+samtools depth minimap2_goldfish1_10.bam | wc -l   # 5156418
+samtools depth minimap2_goldfish1_20.bam | wc -l   # 29298620
+
+samtools depth minimap2_goldfish1_5.bam | awk '$3>0{print $0}' | wc -l # 1087199
+samtools depth minimap2_goldfish1_10.bam | awk '$3>0{print $0}' | wc -l # 5088776
+samtools depth minimap2_goldfish1_20.bam | awk '$3>0{print $0}' | wc -l # 28524804
+
+
+
+samtools sort minimap2_goldfish2_5.sam > minimap2_goldfish2_5.bam
+samtools sort minimap2_goldfish2_10.sam > minimap2_goldfish2_10.bam
+samtools sort minimap2_goldfish2_20.sam > minimap2_goldfish2_20.bam
+
+samtools depth minimap2_goldfish2_5.bam | wc -l   # 571141
+samtools depth minimap2_goldfish2_10.bam | wc -l   # 3343448
+samtools depth minimap2_goldfish2_20.bam | wc -l   # 21817987
+
+samtools depth minimap2_goldfish2_5.bam | awk '$3>0{print $0}' | wc -l #  567825
+samtools depth minimap2_goldfish2_10.bam | awk '$3>0{print $0}' | wc -l # 3296114
+samtools depth minimap2_goldfish2_20.bam | awk '$3>0{print $0}' | wc -l #  21192246
+
+
+
+samtools merge minimap2_goldfish_5_seperate.bam minimap2_goldfish1_5.sam minimap2_goldfish2_5.sam
+samtools merge minimap2_goldfish_10_seperate.bam minimap2_goldfish1_10.sam minimap2_goldfish2_10.sam
+samtools merge minimap2_goldfish_20_seperate.bam minimap2_goldfish1_20.sam minimap2_goldfish2_20.sam
+
+samtools sort minimap2_goldfish_5_seperate.bam  > minimap2_goldfish_5_seperate_sort.bam
+samtools sort minimap2_goldfish_10_seperate.bam  > minimap2_goldfish_10_seperate_sort.bam
+samtools sort minimap2_goldfish_20_seperate.bam  > minimap2_goldfish_20_seperate_sort.bam
+
+
+samtools depth minimap2_goldfish_5_seperate_sort.bam | wc -l   # 1352339
+samtools depth minimap2_goldfish_10_seperate_sort.bam | wc -l   # 6403957
+samtools depth minimap2_goldfish_20_seperate_sort.bam | wc -l   # 35850821
+
+samtools depth minimap2_goldfish_5_seperate_sort.bam | awk '$3>0{print $0}' | wc -l #  1344959
+samtools depth minimap2_goldfish_10_seperate_sort.bam | awk '$3>0{print $0}' | wc -l # 6326191
+samtools depth minimap2_goldfish_20_seperate_sort.bam | awk '$3>0{print $0}' | wc -l #  34973788
+
+
+samtools depth -b cre_uniq.bed minimap2_goldfish_5_seperate_sort.bam | wc -l # 620079
+samtools depth -b cre_uniq.bed minimap2_goldfish_5_seperate_sort.bam | awk '$3>0{print $0}' | wc -l # 616625
+
+samtools depth -b cre_uniq.bed minimap2_goldfish_10_seperate_sort.bam | wc -l #2832447
+samtools depth -b cre_uniq.bed minimap2_goldfish_10_seperate_sort.bam | awk '$3>0{print $0}' | wc -l #2799331
+
+samtools depth -b cre_uniq.bed minimap2_goldfish_20_seperate_sort.bam | wc -l # 15083522
+samtools depth -b cre_uniq.bed minimap2_goldfish_20_seperate_sort.bam | awk '$3>0{print $0}' | wc -l # 14823407
+
+```
+
+
+
+
+
+```
+lastal -P60 zebrafish goldfish1.fa > goldfish1_lastal.maf
+faSize -detailed goldfish1.fa > goldfish1.size
+faToTwoBit goldfish1.fa goldfish1.2bit
+python2 /programs/last-932/bin/maf-convert psl goldfish1_lastal.maf > goldfish1_lastal.psl
+
+axtChain -linearGap=loose -psl goldfish1_lastal.psl -faQ -faT Danio_rerio.GRCz10.dna.toplevel.fa goldfish1.fa goldfish1_lastal.chain
+chainMergeSort goldfish1_lastal.chain > goldfish1_lastal.all.chain
+chainPreNet goldfish1_lastal.all.chain zebrafish.size goldfish1.size goldfish1_lastal.preNet
+chainNet goldfish1_lastal.preNet zebrafish.size goldfish1.size goldfish1_lastal.refTarget.net goldfish1_lastal.chainNet
+netToAxt goldfish1_lastal.refTarget.net goldfish1_lastal.preNet zebrafish.2bit goldfish1.2bit stdout | axtSort stdin goldfish1_lastal.axt
+axtToMaf goldfish1_lastal.axt zebrafish.size goldfish1.size goldfish1_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl goldfish1_lastal_final.maf > goldfish1_lastal_final_forsplit.maf
+cat goldfish1_lastal.maf | last-split | maf-swap | last-split | maf-swap > goldfish1_lastal_split.maf &
+cat goldfish1_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > goldfish1_lastal_final_split.maf &
+
+python2 /programs/last-932/bin/maf-convert sam goldfish1_lastal.maf| samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > goldfish1_lastal.bam &
+python2 /programs/last-932/bin/maf-convert sam goldfish1_lastal_final.maf| sed 's/col.//g' | sed 's/query.//g' | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > goldfish1_lastal_final.bam &
+python2 /programs/last-932/bin/maf-convert sam goldfish1_lastal_split.maf | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > goldfish1_lastal_split.bam &
+python2 /programs/last-932/bin/maf-convert sam goldfish1_lastal_final_split.maf | sed 's/col.//g' | sed 's/query.//g' | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > goldfish1_lastal_final_split.bam &
+
+samtools index goldfish1_lastal.bam
+samtools index goldfish1_lastal_final.bam
+samtools index goldfish1_lastal_split.bam
+samtools index goldfish1_lastal_final_split.bam
+
+samtools depth goldfish1_lastal.bam | wc -l   # 556566186
+samtools depth goldfish1_lastal_split.bam | wc -l # 175401405
+samtools depth goldfish1_lastal_final.bam | wc -l   # 506859989
+samtools depth goldfish1_lastal_final_split.bam | wc -l   # 207853751
+
+samtools depth goldfish1_lastal.bam | awk '$3>0{print $0}' | wc -l #  552251259
+samtools depth goldfish1_lastal_split.bam | awk '$3>0{print $0}' | wc -l # 171964354
+samtools depth goldfish1_lastal_final.bam | awk '$3>0{print $0}' | wc -l # 498521800
+samtools depth goldfish1_lastal_final_split.bam | awk '$3>0{print $0}'| wc -l # 204194727
+
+
+
+
+lastal -P60 zebrafish goldfish2.fa > goldfish2_lastal.maf
+faSize -detailed goldfish2.fa > goldfish2.size
+faToTwoBit goldfish2.fa goldfish2.2bit
+python2 /programs/last-932/bin/maf-convert psl goldfish2_lastal.maf > goldfish2_lastal.psl
+
+axtChain -linearGap=loose -psl goldfish2_lastal.psl -faQ -faT Danio_rerio.GRCz10.dna.toplevel.fa goldfish2.fa goldfish2_lastal.chain
+chainMergeSort goldfish2_lastal.chain > goldfish2_lastal.all.chain
+chainPreNet goldfish2_lastal.all.chain zebrafish.size goldfish2.size goldfish2_lastal.preNet
+chainNet goldfish2_lastal.preNet zebrafish.size goldfish2.size goldfish2_lastal.refTarget.net goldfish2_lastal.chainNet
+netToAxt goldfish2_lastal.refTarget.net goldfish2_lastal.preNet zebrafish.2bit goldfish2.2bit stdout | axtSort stdin goldfish2_lastal.axt
+axtToMaf goldfish2_lastal.axt zebrafish.size goldfish2.size goldfish2_lastal_final.maf -qPrefix=query. -tPrefix=col.
+perl lastFinalToSplit.pl goldfish2_lastal_final.maf > goldfish2_lastal_final_forsplit.maf
+cat goldfish2_lastal.maf | last-split | maf-swap | last-split | maf-swap > goldfish2_lastal_split.maf &
+cat goldfish2_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > goldfish2_lastal_final_split.maf &
+
+python2 /programs/last-932/bin/maf-convert sam goldfish2_lastal.maf| samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > goldfish2_lastal.bam &
+python2 /programs/last-932/bin/maf-convert sam goldfish2_lastal_final.maf| sed 's/col.//g' | sed 's/query.//g' | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > goldfish2_lastal_final.bam &
+python2 /programs/last-932/bin/maf-convert sam goldfish2_lastal_split.maf | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > goldfish2_lastal_split.bam &
+python2 /programs/last-932/bin/maf-convert sam goldfish2_lastal_final_split.maf | sed 's/col.//g' | sed 's/query.//g' | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > goldfish2_lastal_final_split.bam &
+
+samtools index goldfish2_lastal.bam
+samtools index goldfish2_lastal_final.bam
+samtools index goldfish2_lastal_split.bam
+samtools index goldfish2_lastal_final_split.bam
+
+samtools depth goldfish2_lastal.bam | wc -l   # 512932320
+samtools depth goldfish2_lastal_split.bam | wc -l # 145622396
+samtools depth goldfish2_lastal_final.bam | wc -l   # 467063301
+samtools depth goldfish2_lastal_final_split.bam | wc -l   # 173644026
+
+samtools depth goldfish2_lastal.bam | awk '$3>0{print $0}' | wc -l #  509004222
+samtools depth goldfish2_lastal_split.bam | awk '$3>0{print $0}' | wc -l # 142626377
+samtools depth goldfish2_lastal_final.bam | awk '$3>0{print $0}' | wc -l # 459369555
+samtools depth goldfish2_lastal_final_split.bam | awk '$3>0{print $0}'| wc -l # 170487273
+
+
+
+samtools merge goldfish_lastal_seperate.bam goldfish1_lastal.bam goldfish2_lastal.bam
+samtools sort goldfish_lastal_seperate.bam  > goldfish_lastal_seperate_sort.bam
+samtools depth goldfish_lastal_seperate_sort.bam | wc -l   # 
+samtools depth goldfish_lastal_seperate_sort.bam | awk '$3>0{print $0}' | wc -l #  
+
+samtools merge goldfish_lastal_split_seperate.bam goldfish1_lastal_split.bam goldfish2_lastal_split.bam
+samtools sort goldfish_lastal_split_seperate.bam  > goldfish_lastal_split_seperate_sort.bam
+samtools depth goldfish_lastal_split_seperate_sort.bam | wc -l   # 200609628
+samtools depth goldfish_lastal_split_seperate_sort.bam | awk '$3>0{print $0}' | wc -l #  197883844
+
+samtools merge goldfish_lastal_final_seperate.bam goldfish1_lastal_final.bam goldfish2_lastal_final.bam
+samtools sort goldfish_lastal_final_seperate.bam  > goldfish_lastal_final_seperate_sort.bam
+samtools depth goldfish_lastal_final_seperate_sort.bam | wc -l   #
+samtools depth goldfish_lastal_final_seperate_sort.bam | awk '$3>0{print $0}' | wc -l #  
+
+
+samtools merge goldfish_lastal_final_split_seperate.bam goldfish1_lastal_final_split.bam goldfish2_lastal_final_split.bam
+samtools sort goldfish_lastal_final_split_seperate.bam  > goldfish_lastal_final_split_seperate_sort.bam
+samtools depth goldfish_lastal_final_split_seperate_sort.bam | wc -l   # 263725059
+samtools depth goldfish_lastal_final_split_seperate_sort.bam | awk '$3>0{print $0}' | wc -l #  260653540
+
+
+samtools depth -b cre_uniq.bed goldfish_lastal_split_seperate_sort.bam | wc -l # 81465319
+samtools depth -b cre_uniq.bed goldfish_lastal_split_seperate_sort.bam | awk '$3>0{print $0}' | wc -l # 80293322
+
+samtools depth -b cre_uniq.bed goldfish_lastal_final_split_seperate_sort.bam | wc -l # 88698675
+samtools depth -b cre_uniq.bed goldfish_lastal_final_split_seperate_sort.bam | awk '$3>0{print $0}' | wc -l # 87545232
+
+```
+
+
+
+
+## perform genome alignment using MUMmer4 (https://mummer4.github.io/) and summarize the result
+```(check)
+nucmer -t 75 --sam-long=mumer.goldfish1.short.sam Danio_rerio.GRCz10.dna.toplevel.fa goldfish1.fa
+cat mumer.goldfish1.short.sam | grep -v "@" | samtools view --threads 40 -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort --threads 40 - > mumer.goldfish1.short.bam
+samtools index mumer.goldfish1.short.bam # 
+samtools depth mumer.goldfish1.short.bam | wc -l   # 75830883
+samtools depth mumer.goldfish1.short.bam | awk '$3>0{print $0}' | wc -l   # 74720466
+
+
+
+nucmer -t 75 --sam-long=mumer.goldfish2.short.sam Danio_rerio.GRCz10.dna.toplevel.fa goldfish2.fa
+cat mumer.goldfish2.short.sam | grep -v "@" | samtools view --threads 20 -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort --threads 20 - > mumer.goldfish2.short.bam
+samtools index mumer.goldfish2.short.bam #
+samtools depth mumer.goldfish2.short.bam | wc -l   # 60493392
+samtools depth mumer.goldfish2.short.bam | awk '$3>0{print $0}' | wc -l # 59594060
+
+
+samtools merge --threads 60 mumer.goldfish.short_seperate.bam mumer.goldfish1.short.bam mumer.goldfish2.short.bam
+samtools sort --threads 60 mumer.goldfish.short_seperate.bam  > mumer.goldfish.short_seperate_sort.bam
+samtools depth mumer.goldfish.short_seperate_sort.bam | wc -l   # 94379236
+samtools depth mumer.goldfish.short_seperate_sort.bam | awk '$3>0{print $0}' | wc -l #  93307218
+
+samtools depth -b cre_uniq.bed mumer.goldfish.short_seperate_sort.bam | wc -l   # 38151099
+samtools depth -b cre_uniq.bed mumer.goldfish.short_seperate_sort.bam | awk '$3>0{print $0}' | wc -l #  37653009
+
+```
+
+
+
+## perform genome alignment using GSAlign(https://github.com/hsinnan75/GSAlign) and summarize the result
+```
+GSAlign -r Danio_rerio.GRCz10.dna.toplevel.fa -q goldfish1.fa -t 18 -o goldfish1_gsalign -fmt 1
+python2 /programs/last-932/bin/maf-convert sam goldfish1_gsalign.maf | sed 's/qry.//g' | sed 's/ref.//g' | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > goldfish1_gsalign.bam
+samtools index goldfish1_gsalign.bam
+samtools depth goldfish1_gsalign.bam | wc -l # 13185528
+samtools depth goldfish1_gsalign.bam | awk '$3>0{print $0}' | wc -l # 12851751
+
+
+GSAlign -r Danio_rerio.GRCz10.dna.toplevel.fa -q goldfish2.fa -t 70 -o goldfish2_gsalign -fmt 1
+python2 /programs/last-932/bin/maf-convert sam goldfish2_gsalign.maf | sed 's/qry.//g' | sed 's/ref.//g' | samtools view -O BAM --reference Danio_rerio.GRCz10.dna.toplevel.fa - | samtools sort - > goldfish2_gsalign.bam
+samtools index goldfish2_gsalign.bam
+samtools depth goldfish2_gsalign.bam | wc -l #  9930567
+samtools depth goldfish2_gsalign.bam | awk '$3>0{print $0}' | wc -l # 9658507
+
+
+samtools merge goldfish2_gsalign_seperate.bam goldfish1_gsalign.bam goldfish2_gsalign.bam
+samtools sort goldfish2_gsalign_seperate.bam  >goldfish2_gsalign_seperate_sort.bam
+samtools depth goldfish2_gsalign_seperate_sort.bam | wc -l   # 20074205
+samtools depth goldfish2_gsalign_seperate_sort.bam | awk '$3>0{print $0}' | wc -l #  19590370
+
+
+samtools depth -b cre_uniq.bed goldfish2_gsalign_seperate_sort.bam | wc -l   # 8006006
+samtools depth -b cre_uniq.bed goldfish2_gsalign_seperate_sort.bam | awk '$3>0{print $0}' | wc -l #  7831873
+cat goldfish2_lastal.maf | last-split | maf-swap | last-split | maf-swap > goldfish2_lastal_split.maf
+```
+
+
+
+
+```{r}
+genomesize = read.table("Danio_rerio.GRCz10.dna.toplevel.fa.fai")
+genomesize = sum(genomesize$V2)
+
+
+library(ggplot2)
+dat = read.table("goldFishSummary2", sep="\t", header=TRUE)
+dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
+dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20", "LAST+one-to-one", "MUMmer4", "GSAlign"))
+
+dat$proportion = dat$proportion/genomesize
+p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+  labs(x="", y="Genome porportion", title="")+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+        legend.position = "top",
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+        
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "genome_aligned2"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+
+```
+
+

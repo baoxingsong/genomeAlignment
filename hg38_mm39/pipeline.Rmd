@@ -1,0 +1,217 @@
+---
+title: ""
+author: "Baoxing Song"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+```
+wget ftp://ftp.ensembl.org/pub/release-102/gff3/homo_sapiens/Homo_sapiens.GRCh38.102.gff3.gz
+
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.1.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.2.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.3.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.4.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.5.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.6.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.7.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.8.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.9.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.10.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.11.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.12.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.13.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.14.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.15.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.16.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.17.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.18.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.19.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.20.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.21.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.22.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.X.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-102/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.Y.fa.gz
+
+
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr1.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr2.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr3.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr4.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr5.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr6.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr7.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr8.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr9.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr10.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr11.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr12.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr13.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr14.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr15.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr16.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr17.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr18.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chr19.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chrM.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chrX.fa.gz
+wget https://hgdownload.soe.ucsc.edu/goldenPath/mm39/chromosomes/chrY.fa.gz
+
+
+gunzip *gz
+cat Homo_sapiens.GRCh38.dna.chromosome.*.fa > hg38.fa
+cat chr*fa > mm39.fa
+rm chr*fa
+rm Homo_sapiens.GRCh38.dna.chromosome.*.fa
+
+anchorwave gff2seq -x -r hg38.fa -i Homo_sapiens.GRCh38.102.gff3 -o cds.fa
+
+minimap2 -x splice -t 87 -k 12 -a -p 0.4 -N 20 hg38.fa cds.fa > ref.sam
+minimap2 -x splice -t 87 -k 12 -a -p 0.4 -N 20 mm39.fa cds.fa > cds.sam
+
+
+anchorwave gff2seq -r hg38.fa -i Homo_sapiens.GRCh38.102.gff3 -o cds2.fa
+
+minimap2 -x splice -t 87 -k 12 -a -p 0.4 -N 20 hg38.fa cds2.fa > ref2.sam
+minimap2 -x splice -t 87 -k 12 -a -p 0.4 -N 20 mm39.fa cds2.fa > cds2.sam
+
+
+
+```
+
+
+```
+
+
+
+/usr/bin/time anchorwave proali -i Homo_sapiens.GRCh38.102.gff3 -r hg38.fa -a cds.sam -as cds.fa -ar ref.sam -s mm39.fa -n mm39.anchors -x -R 1 -Q 1 -o mm39.maf -f mm39.f.maf -w 38000 -fa3 200000 -B -4 -O1 -4 -E1 -2 -O2 -80 -E2 -1 -t 19 > tealignlog
+/usr/bin/time anchorwave proali -i Homo_sapiens.GRCh38.102.gff3 -r hg38.fa -a cds2.sam -as cds2.fa -ar ref2.sam -s mm39.fa -n mm392.anchors -R 1 -Q 1 -o mm392.maf -f mm392.f.maf -w 38000 -fa3 200000 -B -4 -O1 -4 -E1 -2 -O2 -80 -E2 -1 -t 10 > tealignlog2
+
+
+
+maf-convert sam mm39.maf | sed 's/hg38.fa.//g' | sed 's/mm39.fa.//g' > mm39.sam
+cat mm39.sam | samtools view -O BAM --reference hg38.fa - | samtools sort - > mm39.bam
+
+cat mm39.sam | awk '$1 != "Y" && $3 != "Y" {print $0}' > mm39_noY.sam
+cat mm39_noY.sam | samtools view -O BAM --reference hg38.fa - | samtools sort - > mm39_noY.bam
+samtools index mm39.bam  
+samtools index mm39_noY.bam
+
+
+samtools depth mm39.bam | wc -l   # 2626401667
+samtools depth mm39.bam | awk '$3>0 {print $0}' | wc -l # 898282066
+
+samtools depth mm39_noY.bam | wc -l  # 2619366741
+samtools depth mm39_noY.bam | awk '$3>0 {print $0}' | wc -l  # 898205502
+
+
+
+
+
+maf-convert sam mm392.maf | sed 's/hg38.fa.//g' | sed 's/mm39.fa.//g' > mm392.sam
+samtools view -O BAM --reference hg38.fa mm392.sam > mm392_no_sort.bam
+samtools sort mm392_no_sort.bam --write-index --output-fmt BAM --reference hg38.fa --threads 10 -o mm392.bam
+
+#grep -v "@" mm392.sam | samtools view -O BAM --reference hg38.fa - > mm392.bam
+
+
+cat mm392.sam | awk '$1 != "Y" && $3 != "Y" {print $0}' > mm392_noY.sam
+samtools view -O BAM --reference hg38.fa mm392_noY.sam > mm392_noY_no_sort.bam
+samtools sort mm392_noY_no_sort.bam --write-index --output-fmt BAM --reference hg38.fa --threads 10 -o mm392_noY.bam
+
+samtools index mm392.bam  
+samtools index mm392_noY.bam
+
+samtools depth mm392.bam | wc -l   # 2615637279
+samtools depth mm392.bam | awk '$3>0 {print $0}' | wc -l # 892068996
+
+samtools depth mm392_noY.bam | wc -l  # 2615637279
+samtools depth mm392_noY.bam | awk '$3>0 {print $0}' | wc -l  # 892068996
+
+
+```
+
+
+
+Check the number of aligned site of the chain and net pipeline.
+
+```
+wget http://hgdownload.cse.ucsc.edu/goldenpath/hg38/vsMm39/hg38.mm39.synNet.maf.gz
+
+
+
+gunzip hg38.mm39.synNet.maf.gz
+maf-convert sam hg38.mm39.synNet.maf | sed 's/hg38.chr//g' | sed 's/mm39.//g' > hg38.mm39.synNet.sam
+cat hg38.mm39.synNet.sam | samtools view -O BAM --reference hg38.fa -  | samtools sort - > hg38.mm39.synNet.bam
+
+cat hg38.mm39.synNet.sam | awk '$1 != "Y" && $3 != "Y" {print $0}' > hg38.mm39.synNet_noY.sam
+cat hg38.mm39.synNet_noY.sam | samtools view -O BAM --reference hg38.fa - | samtools sort - > hg38.mm39.synNet_noY.bam
+
+samtools depth hg38.mm39.synNet.bam | wc -l # 1003090512
+samtools depth hg38.mm39.synNet.bam | awk '$3>0 {print $0}' | wc -l  # 893340520
+
+samtools depth hg38.mm39.synNet_noY.bam | wc -l # 1001968791
+samtools depth hg38.mm39.synNet_noY.bam | awk '$3>0 {print $0}' | wc -l   # 892336587
+
+```
+
+get human candidate Cis Regulatory Elements
+```
+wget http://hgdownload.soe.ucsc.edu/gbdb/hg38/encode3/ccre/encodeCcreCombined.bb
+bigBedToBed encodeCcreCombined.bb encodeCcreCombined.bed
+sed -i -E 's/^chr//g' encodeCcreCombined.bed
+bedtools sort -i encodeCcreCombined.bed | bedtools merge | grep -v "^Y" > encodeCcreCombined_merged.bed
+
+
+samtools depth -b encodeCcreCombined_merged.bed mm39_noY.bam | wc -l  # 237087412
+samtools depth -b encodeCcreCombined_merged.bed mm39_noY.bam | awk '$3>0 {print $0}' | wc -l  # 121138626
+
+samtools depth -b encodeCcreCombined_merged.bed mm392_noY.bam | wc -l  # 234830066
+samtools depth -b encodeCcreCombined_merged.bed mm392_noY.bam | awk '$3>0 {print $0}' | wc -l  # 121152422
+
+samtools depth -b encodeCcreCombined_merged.bed hg38.mm39.synNet_noY.bam | wc -l # 147255034
+samtools depth -b encodeCcreCombined_merged.bed hg38.mm39.synNet_noY.bam | awk '$3>0 {print $0}' | wc -l   # 131681625
+
+```
+
+
+
+```{r}
+library(ggplot2)
+dat = read.table("Summary", sep="\t", header=TRUE)
+print(dat)
+dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
+dat$proportion = dat$proportion/3031042417
+print(dat)
+p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+  labs(x="", y="Genome porportion", title="")+
+	    	theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+	    	  axis.line = element_blank(),
+        legend.position = "top",
+	        panel.grid.major = element_blank(),
+	        panel.grid.minor = element_blank(),
+	        panel.border = element_blank(),
+        
+	        panel.background = element_blank(),
+	        axis.text.y = element_text( colour = "black"),
+	    	axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "genome_aligned"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+```
+
+
+

@@ -8,12 +8,17 @@ Please clone the repository:
 git clone https://github.com/baoxingsong/genomeAlignment.git
 ```
 
-PLease view the `pipeline.html` file under each folder using your web browser or view the `pipeline.Rmd` using [Rstudio](https://www.rstudio.com/).
+Please view the `pipeline.html` file under each folder using your web browser or view the `pipeline.Rmd` using [Rstudio](https://www.rstudio.com/).
 1) [Synthetic benchmark via variant calling of 18 Arabidopsis accessions](./Arabidopsis/).
 2) [Synthetic benchmark via removing ~60% of LTR retrotransposons from the maize B73 v4 assembly](./maizeTE/).
 3) [Alignment between the maize B73 v4 and the Mo17 CAU assembly](./alignb73againstmo17/).
 4) [Alignment between the maize B73 v4 and the B73-AB10 assembly](./B73-AB10/).
 5) [Alignment between the maize B73 v4 and the small-kernel (SK) assembly](./maizeSK/).
 6) [Alignment between the maize B73 v4 and the sorghum assembly](./sorghum_maize/).
+7) [Alignment between the human (hg38) and the mouse (mm39) genome assembly](./hg38_mm39/).
+8) [Alignment between the human (hg38) and the chimpanzee (pro3) genome assembly](./humanpro3/).
+9) [Alignment between the goldfish and the zebrafish (GRCz10) genome assembly](./goldfish_zebrafish/).
+10) [Investigate the collinearity between the human (hg38) and the axolotl genome assembly](./huamn_axolotl/).
+11) [Investigate the collinearity between among a bunch of plant genome assemblies](./checkCollinearityAcroossAbunchOfPlantGenome/).
 
 If you have any question, please feel free to send E-mail to songbaoxing168@163.com.
