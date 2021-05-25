@@ -6,6 +6,7 @@ output:
   html_document:
     df_print: paged
   word_document: default
+  pdf_document: default
 editor_options:
   chunk_output_type: inline
 ---
@@ -1817,7 +1818,7 @@ newd$approach = factor(newd$approach, levels = c("AnchorWave", "minimap2_asm5", 
 newd$score = factor(newd$score, levels = c("F-score", "precision", "recall"))
 
 p = ggplot(newd, aes(x=approach, y=number, fill=score, color=score)) +geom_boxplot(width=.6) + theme_grey(base_size = 24) + ylim(0, 1)+
-  labs(x="Test on Arabidopsis genome alignment", y="") + 
+  labs(x="Test of Arabidopsis genome alignment", y="") + 
   theme(axis.line = element_blank(),
   		legend.title = element_blank(),
         panel.background = element_blank(),
