@@ -231,10 +231,10 @@ Manually organize the outputs of evaluateTEAlignment into a file names as recall
 
 
 library(ggplot2)
-dat = read.table("recallData", header=TRUE)
+dat = read.table("recallData", header=TRUE, sep="\t")
 print(dat)
 
-dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10",  "LAST+one-to-one", "MUMmer4", "GSAlign"))
+dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10",  "LAST one-to-one", "MUMmer4", "GSAlign"))
 dat$software <- factor(dat$software, levels = c("AnchorWave", "minimap2", "LAST", "MUMmer4", "GSAlign"))
 
 myColors <- c("#F8766D", "#D89000", "#A3A500", "#00BF7D",  "#E76BF3", "#FF62BC")

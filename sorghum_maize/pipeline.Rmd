@@ -352,7 +352,7 @@ TE2018$len = TE2018$V3-TE2018$V2
 TE2018TotalLength = sum(abs(TE2018$len)) # 1495364259
 
 library(ggplot2)
-data = read.table("summaryData", header=TRUE)
+data = read.table("summaryData", header=TRUE, sep="\t")
 data$recall = data$depth_covered_bed / data$bed
 
 data$non_TFBS_matches = data$depth_covered - data$depth_covered_bed
@@ -362,7 +362,7 @@ data$non_TFBS = data$depth - data$depth_bed
 data$enrichment = (data$depth_covered_bed/data$depth_bed)/(data$non_TFBS_matches/data$non_TFBS)
 
 
-data$approach <- factor(data$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20", "LAST+many-to-many", "LAST+many-to-one", "LAST+one-to-one", "MUMmer4", "GSAlign"))
+data$approach <- factor(data$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20", "LAST many-to-many", "LAST many-to-one", "LAST one-to-one", "MUMmer4", "GSAlign"))
 data$software <- factor(data$software, levels = c("AnchorWave", "minimap2", "LAST", "MUMmer4", "GSAlign"))
 shape = c(16, 17, 17, 17,  15, 15, 15, 3, 7)
 
@@ -616,7 +616,6 @@ data.frame(approach=data$approach, proportion=(totalTELength-data$X2018.09.19)/t
 dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
 dat$c = factor(dat$c, levels=c("1TE unaligned", "2non-TE unaligned", "3non-TE gap", "4TE gap", "5TE position match", "6non-TE position match"))
 dat$region = factor(dat$region)
-#dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST+one-to-one",  "MUMmer4", "GSAlign"))
 print(dat)
 library(ggpattern)
 p = ggplot(data=dat, aes(x=approach, y=proportion, fill=c, pattern = region)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1","#54AEE1", "#92A000",  "#92A000", "#EF8600", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
@@ -656,7 +655,7 @@ dev.off()
 
 data0 = data.frame(software=c("ideal expection", as.character(data$software)), approach=c("ideal expection", as.character(data$approach)), coverage=c(0, (data$X2018.09.19_covered)/data$depth_covered) )
 
-data0$approach <- factor(data0$approach, levels = c("ideal expection", "AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20","LAST+many-to-many", "LAST+many-to-one", "LAST+one-to-one", "MUMmer4", "GSAlign"))
+data0$approach <- factor(data0$approach, levels = c("ideal expection", "AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20","LAST many-to-many", "LAST many-to-one", "LAST one-to-one", "MUMmer4", "GSAlign"))
 data0$software <- factor(data0$software, levels = c("ideal expection", "AnchorWave", "minimap2", "LAST", "MUMmer4", "GSAlign"))
 
 

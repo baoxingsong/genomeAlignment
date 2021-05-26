@@ -669,7 +669,7 @@ samtools depth gsalign.bam -b all_reproducible_peaks_summits_merged.bed | awk '$
 ```
 ``` {r}
 library(ggplot2)
-data = read.table("coverage")
+data = read.table("coverage", sep="\t")
 library(ggpattern)
 
 totalGenomeLength = read.table("Zea_mays.AGPv4.dna.toplevel.fa.fai")
@@ -696,7 +696,7 @@ data.frame(approach=data$V2, proportion=(totalTELength-data$V5)/totalGenomeLengt
 dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
 dat$c = factor(dat$c, levels=c("1TE unaligned", "2non-TE unaligned", "3non-TE gap", "4TE gap", "5TE position match", "6non-TE position match"))
 dat$region = factor(dat$region)
-dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST+one-to-one",  "MUMmer4", "GSAlign"))
+dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST one-to-one",  "MUMmer4", "GSAlign"))
 print(dat)
 p = ggplot(data=dat, aes(x=approach, y=proportion, fill=c, pattern = region)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1","#54AEE1", "#92A000",  "#92A000", "#EF8600", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
   labs(x="", y="Proportion of B73 \n genome aligned to Mo17", title="")+
@@ -733,13 +733,13 @@ dev.off()
 
 
 library(ggplot2)
-data = read.table("TEcoverage")
+data = read.table("TEcoverage", sep="\t")
 totalTELength = read.table("present_in_B73.absent_in_Mo17.bed")
 totalTELength = sum(abs(totalTELength$V3-totalTELength$V2))
 dat = rbind( data.frame(approach=data$V2, proportion=data$V4, category = "position match"), data.frame(approach=data$V2, proportion=(data$V3-data$V4), category = "gap"),  data.frame(approach=data$V2, proportion=(totalTELength-data$V3), category = "unaligned") )
 dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
 
-dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST+one-to-one",  "MUMmer4", "GSAlign"))
+dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST one-to-one",  "MUMmer4", "GSAlign"))
 print(dat)
 p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
   labs(x="", y="Number of basepairs in\nTE present in B73\nand absent in Mo17\nbeing aligned (bp)", title="")+
@@ -777,7 +777,7 @@ data$coverage = data$V3/totalTELength
 dat = rbind( data.frame(approach=data$V2, proportion=data$V4/totalTELength, category = "position match"), data.frame(approach=data$V2, proportion=(data$V3-data$V4)/totalTELength, category = "gap"),  data.frame(approach=data$V2, proportion=(totalTELength-data$V3)/totalTELength, category = "unaligned") )
 dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
 
-dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST+one-to-one",  "MUMmer4", "GSAlign"))
+dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST one-to-one",  "MUMmer4", "GSAlign"))
 print(dat)
 p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
   labs(x="", y="Proportion of TE\npresent in B73\nand absent in Mo17\nbeing aligned", title="")+

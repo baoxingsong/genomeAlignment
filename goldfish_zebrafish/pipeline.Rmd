@@ -114,7 +114,7 @@ anchorwave proali -i Danio_rerio.GRCz10.91.chr.gff3 -r Danio_rerio.GRCz10.dna.to
 ```
 
 
-```{r}
+```{r warning=FALSE, fig.height = 87.5, fig.width = 150}
 library(ggplot2)
 library(compiler)
 enableJIT(3)
@@ -659,7 +659,7 @@ genomesize = sum(genomesize$V2)
 library(ggplot2)
 dat = read.table("goldFishSummary2", sep="\t", header=TRUE)
 dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
-dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20", "LAST+one-to-one", "MUMmer4", "GSAlign"))
+dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20", "LAST one-to-one", "MUMmer4", "GSAlign"))
 
 dat$proportion = dat$proportion/genomesize
 p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+

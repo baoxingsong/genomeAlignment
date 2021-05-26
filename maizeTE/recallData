@@ -1,7 +1,7 @@
-software	approach 	Recall
+software	approach	Recall
 minimap2	minimap2_asm5	0.2136
 minimap2	minimap2_asm10	0.2071
 MUMmer4	MUMmer4	0
 GSAlign	GSAlign	0
 AnchorWave	AnchorWave	0.9534003
-LAST	LAST+one-to-one	0
+LAST	LAST one-to-one	0
