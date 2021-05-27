@@ -30,7 +30,7 @@ NOTE: please do NOT use CDS extracted using other software and do NOT use the ou
 anchorwave gff2seq -r Zea_mays.AGPv4.dna.toplevel.fa -i Zea_mays.AGPv4.34.gff3 -o cds.fa
 ```
 
-Use minimap2 (https://github.com/lh3/minimap2) to map the extracted sequence to the reference B73 genome sequence and MO17 genomes
+Use minimap2 (https://github.com/lh3/minimap2) to map the extracted sequence to the reference B73 genome sequence and Mo17 genomes
 ```
 
 minimap2 -x splice -t 6 -k 12 -a -p 0.4 -N 20 Zm-Mo17-REFERENCE-CAU-1.0.fa cds.fa > cds.sam
@@ -694,13 +694,13 @@ data.frame(approach=data$V2, proportion=(totalTELength-data$V5)/totalGenomeLengt
 
 
 dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
-dat$c = factor(dat$c, levels=c("1TE unaligned", "2non-TE unaligned", "3non-TE gap", "4TE gap", "5TE position match", "6non-TE position match"))
+dat$c = factor(dat$c, levels=c("2non-TE unaligned", "1TE unaligned", "3non-TE gap", "4TE gap", "5TE position match", "6non-TE position match"))
 dat$region = factor(dat$region)
 dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20",  "LAST one-to-one",  "MUMmer4", "GSAlign"))
 print(dat)
 p = ggplot(data=dat, aes(x=approach, y=proportion, fill=c, pattern = region)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1","#54AEE1", "#92A000",  "#92A000", "#EF8600", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
   labs(x="", y="Proportion of B73 \n genome aligned to Mo17", title="")+
-   geom_bar_pattern( stat="identity", color = "black",  pattern_fill = "black",
+   geom_bar_pattern( stat="identity", color = "black", size=0.1,  pattern_fill = "black",
                    pattern_angle = 45,
                    pattern_density = 0.1,
                    pattern_spacing = 0.025,
@@ -728,7 +728,7 @@ dev.off()
 pdf(paste(file, ".pdf", sep=""), width=8, height=7)
 print(p)
 dev.off()
-# I could not plot this figure as what I expected. I modified the output figure for publication purpose
+# I could not plot this figure as what I expected. I modified the output figure using Adobe Illustrator for publication purpose
 
 
 
