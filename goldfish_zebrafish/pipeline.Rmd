@@ -663,7 +663,7 @@ dat$approach <- factor(dat$approach, levels = c("AnchorWave", "minimap2_asm5", "
 
 dat$proportion = dat$proportion/genomesize
 p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
-  labs(x="", y="Genome porportion", title="")+
+  labs(x="", y="Genome proportion", title="")+
 	    	theme_bw() +theme_grey(base_size = 24) + theme(
         strip.background = element_blank(),
         strip.text.x = element_blank(),
