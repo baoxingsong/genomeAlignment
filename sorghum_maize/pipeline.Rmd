@@ -160,14 +160,15 @@ perform genome alignment using AnchorWave and summarize the result
 
 
 maf-convert sam anchorwave.maf | sed 's/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.//g' | sed 's/Zea_mays.AGPv4.dna.toplevel.fa.//g' | samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa - | samtools sort - > anchorwave.bam
-samtools mpileup anchorwave.bam | wc -l   # 1870770572
-samtools depth anchorwave.bam -b all_reproducible_peaks_summits_merged.bed | wc -l  # 57164808
-samtools depth anchorwave.bam | awk '$3>0{print $0}' | wc -l  # 125848664
-samtools depth anchorwave.bam -b all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l    # 34133000
-samtools depth anchorwave.bam -b Zea_mays.AGPv4.34_coding_gene.bed | wc -l # 150034551
-samtools depth anchorwave.bam -b Zea_mays.AGPv4.34_coding_gene.bed | awk '$3>0{print $0}' | wc -l #68301524
-samtools depth anchorwave.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l # 1308576282
-samtools depth anchorwave.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l  # 27551272
+samtools mpileup anchorwave.bam | wc -l   # 1893769904
+samtools depth anchorwave.bam | wc -l   # 1893769904
+samtools depth anchorwave.bam | awk '$3>0{print $0}' | wc -l  # 126031139
+samtools depth anchorwave.bam -b ../all_reproducible_peaks_summits_merged.bed | wc -l  # 57289418
+samtools depth anchorwave.bam -b ../all_reproducible_peaks_summits_merged.bed | awk '$3>0{print $0}' | wc -l    # 34148563
+samtools depth anchorwave.bam -b ../Zea_mays.AGPv4.34_coding_gene.bed | wc -l # 150625642
+samtools depth anchorwave.bam -b ../Zea_mays.AGPv4.34_coding_gene.bed | awk '$3>0{print $0}' | wc -l #68352913
+samtools depth anchorwave.bam -b ../B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l # 1325589558
+samtools depth anchorwave.bam -b ../B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l  # 27642638
 ```
 
 
@@ -375,7 +376,7 @@ print(data)
 
 p = ggplot(data=data, aes(x=recall, y=enrichment, color=approach, shape=software)) + geom_point(size=5, alpha=0.8) + 
 guides(colour = guide_legend(override.aes = list(shape = shape))) +scale_shape(guide = FALSE)+ colScale+fillScale+
-  labs(x="TFBS recall", y="Match ratio in TFBS\nalignment to match ratio\n in non-TFBS alignment", title="")+ xlim(0, 1) + ylim(0, 12) +
+  labs(x="TFBS recall", y="Position match ratio in TFBS\nalignment to position match ratio\n in non-TFBS alignment", title="")+ xlim(0, 1) + ylim(0, 12) +
 	    	theme_bw() +theme_grey(base_size = 24) + theme(
         strip.background = element_blank(),
         strip.text.x = element_blank(),
@@ -574,6 +575,7 @@ data$coverage = data$depth/totalGenomeLength
 dat = rbind( data.frame(approach=data$approach, proportion=data$depth_covered/totalGenomeLength, category = "position match"), data.frame(approach=data$approach, proportion=(data$depth-data$depth_covered)/totalGenomeLength, category = "gap"),  data.frame(approach=data$approach, proportion=(totalGenomeLength-data$depth)/totalGenomeLength, category = "unaligned") )
 
 dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
+print(dat)
 p = ggplot(data=dat, aes(x=approach, y=proportion, fill=category)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1", "#92A000", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
   labs(x="", y="Proportion of maize \n genome aligned to sorghum", title="")+
 	    	theme_bw() +theme_grey(base_size = 24) + theme(
@@ -614,7 +616,7 @@ data.frame(approach=data$approach, proportion=(totalGenomeLength-data$depth-tota
 data.frame(approach=data$approach, proportion=(totalTELength-data$X2018.09.19)/totalGenomeLength, c="1TE unaligned", category = "unaligned", region="TE_PAV") )
 
 dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
-dat$c = factor(dat$c, levels=c("1TE unaligned", "2non-TE unaligned", "3non-TE gap", "4TE gap", "5TE position match", "6non-TE position match"))
+dat$c = factor(dat$c, levels=c("2non-TE unaligned", "1TE unaligned", "3non-TE gap", "4TE gap", "5TE position match", "6non-TE position match"))
 dat$region = factor(dat$region)
 print(dat)
 library(ggpattern)
@@ -775,7 +777,7 @@ print(p)
 
 data0 = data.frame(software=data$software, approach=data$approach, coverage=((data$X2018.09.19_covered/data$X2018.09.19) / (data$non_TE_matches/data$non_TE ) ))  # the value of 162494287 is the total genetic region length, which is counted above in this file
 p = ggplot(data=data0, aes(x=approach, y=coverage, color=approach, fill=approach)) +  geom_bar(stat="identity", alpha=0.8)  +guides(color = FALSE, fill = FALSE)+ylim(0, 1.1)+geom_hline(yintercept=1, linetype="dashed", color = "gray", size=1) +
-  labs(x="", y="Match ratio in TE\nalignment to match ratio\n in non-TE alignment", title="")+
+  labs(x="", y="Position match ratio in TE\nalignment to position match ratio\n in non-TE alignment", title="")+
 	    	theme_bw() +theme_grey(base_size = 24) + theme(
         strip.background = element_blank(),
         strip.text.x = element_blank(),
@@ -918,3 +920,6 @@ dev.off()
 
 ```
 
+perl ../../coutXamdEqualInsamfile.pl anchorwave.sam
+total number of =:  98995353
+total number of X:  27035786

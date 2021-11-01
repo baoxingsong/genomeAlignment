@@ -24,8 +24,8 @@ wget https://www.genoscope.cns.fr/externe/plants/data/Mschizocarpa_chromosomes.f
 minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Mschizocarpa_chromosomes.fasta maize_cds.fa > maize.banana.sam
 
 
-wget ftp://ftp.ensemblgenomes.org/pub/plants/release-49/fasta/solanum_lycopersicum/dna/Solanum_lycopersicum.SL3.0.dna.toplevel.fa.gz # tomato
-gunzip Solanum_lycopersicum.SL3.0.dna.toplevel.fa.gz
+wget ftp://ftp.ensemblgenomes.org/pub/release-41/plants/fasta/solanum_lycopersicum/dna/Solanum_lycopersicum.SL2.50.dna.toplevel.fa.gz # tomato
+gunzip Solanum_lycopersicum.SL2.50.dna.toplevel.fa.gz
 wget https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_gff3/TAIR10_GFF3_genes.gff
 wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr1.fas
 wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr2.fas
@@ -36,8 +36,8 @@ cat TAIR10_chr1.fas TAIR10_chr2.fas TAIR10_chr3.fas TAIR10_chr4.fas TAIR10_chr5.
 rm TAIR10_chr1.fas TAIR10_chr2.fas TAIR10_chr3.fas TAIR10_chr4.fas TAIR10_chr5.fas
 anchorwave gff2seq -r tair10.fa -i TAIR10_GFF3_genes.gff -o tair10_cds.fa
 minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 tair10.fa tair10_cds.fa > tair10.sam
-minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Solanum_lycopersicum.SL3.0.dna.toplevel.fa tair10_cds.fa > ara.tomato.sam
-minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Solanum_lycopersicum.SL3.0.dna.toplevel.fa maize_cds.fa > maize.tomato.sam
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Solanum_lycopersicum.SL2.50.dna.toplevel.fa tair10_cds.fa > ara.tomato.sam
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Solanum_lycopersicum.SL2.50.dna.toplevel.fa maize_cds.fa > maize.tomato.sam
 
 
 perl alignmentToDotplot.pl Zea_mays.AGPv4.34.gff3 maize.banana.sam > maize.banana.tab
@@ -252,7 +252,7 @@ anchorwave proali -i Zea_mays.AGPv4.34.gff3 -r Zea_mays.AGPv4.dna.toplevel.fa -a
 anchorwave proali -i Zea_mays.AGPv4.34.gff3 -r Zea_mays.AGPv4.dna.toplevel.fa -as maize_cds.fa -a maize.banana.sam -ar maize_cds_maize.sam -s Mschizocarpa_chromosomes.fasta maize.cds.fa -n B73_banana.anchorspro -ns -R 8 -Q 8
 
 anchorwave proali -i TAIR10_GFF3_genes.gff -r tair10.fa -as tair10_cds.fa -a ara.grape.sam -ar tair10.sam -s Vitis_vinifera.12X.dna.toplevel.fa -n ara_grape.anchorspro -ns -R 1 -Q 4
-anchorwave proali -i TAIR10_GFF3_genes.gff -r tair10.fa -as tair10_cds.fa -a ara.tomato.sam -ar tair10.sam -s Solanum_lycopersicum.SL3.0.dna.toplevel.fa -n ara_tomato.anchorspro -ns -R 3 -Q 4
+anchorwave proali -i TAIR10_GFF3_genes.gff -r tair10.fa -as tair10_cds.fa -a ara.tomato.sam -ar tair10.sam -s Solanum_lycopersicum.SL2.50.dna.toplevel.fa -n ara_tomato.anchorspro -ns -R 3 -Q 4
 
 anchorwave proali -i TAIR10_GFF3_genes.gff -r tair10.fa -as tair10_cds.fa -a ara.chocolate.sam -ar tair10.sam -s Theobroma_cacao_matina.Theobroma_cacao_20110822.dna.toplevel.fa -n ara_chocolate.anchorspro -ns -R 1 -Q 4
 
@@ -280,8 +280,8 @@ grep -v "#" ara_chocolate.anchorspro | awk '{print $1"\t"$2"\t"$3}' | tail -n +2
 bedtools sort -i ara_chocolate.anchorspro.bed > ara_chocolate.anchorspro_sort.bed
 bedtools merge -i ara_chocolate.anchorspro_sort.bed > ara_chocolate.anchorspro_sort_merge.bed
 
-
 ```
+
 
 ```{r warning=FALSE, fig.height = 80, fig.width = 120}
 data =read.table("B73_rice.anchorspro", head=TRUE)
@@ -404,32 +404,124 @@ p
 dev.off()
 
 
+maizegenomesize = read.table("Zea_mays.AGPv4.dna.toplevel.fa.fai")
+maizegenomesize = sum(maizegenomesize$V2)
 
+aragenomesize = read.table("tair10.fa.fai")
+aragenomesize = sum(aragenomesize$V2)
 
 
 d = read.table("ara_grape.anchorspro_sort_merge.bed")
 d$length = abs(d$V3-d$V2) + 1
 sum(d$length)
+sum(d$length)/aragenomesize
 
 
 d = read.table("ara_tomato.anchorspro_sort_merge.bed")
 d$length = abs(d$V3-d$V2) + 1
 sum(d$length)
-
+sum(d$length)/aragenomesize
 
 d = read.table("B73_banana.anchorspro_sort_merge.bed")
 d$length = abs(d$V3-d$V2) + 1
 sum(d$length)
+sum(d$length)/maizegenomesize
 
 d = read.table("B73_rice.anchorspro_sort_merge.bed")
 d$length = abs(d$V3-d$V2) + 1
 sum(d$length)
+sum(d$length)/maizegenomesize
 
 d = read.table("ara_chocolate.anchorspro_sort_merge.bed")
 d$length = abs(d$V3-d$V2) + 1
 sum(d$length)
-
+sum(d$length)/aragenomesize
 
 ```
 
 
+
+```
+anchorwave proali -i TAIR10_GFF3_genes.gff -r tair10.fa -as tair10_cds.fa -a ara.grape.sam -ar tair10.sam -s Vitis_vinifera.12X.dna.toplevel.fa -n ara_grape.anchorspro -R 1 -Q 4 -t 18 -o ara_grape.maf
+
+
+anchorwave proali -i TAIR10_GFF3_genes.gff -r tair10.fa -as tair10_cds.fa -a ara.tomato.sam -ar tair10.sam -s Solanum_lycopersicum.SL2.50.dna.toplevel.fa -n ara_tomato.anchorspro -R 3 -Q 4 -t 18 -o ara_tomato.maf
+
+anchorwave proali -i TAIR10_GFF3_genes.gff -r tair10.fa -as tair10_cds.fa -a ara.chocolate.sam -ar tair10.sam -s Theobroma_cacao_matina.Theobroma_cacao_20110822.dna.toplevel.fa -n ara_chocolate.anchorspro -R 1 -Q 4 -t 18 -o ara_chocolate.maf
+
+anchorwave proali -i Zea_mays.AGPv4.34.gff3 -r Zea_mays.AGPv4.dna.toplevel.fa -as maize_cds.fa -a maize.rice.sam -ar maize_cds_maize.sam -s Oryza_sativa.IRGSP-1.0.dna.toplevel.fa -n B73_rice.anchorspro -R 1 -Q 2 -t 18 -o maize.rice.maf
+anchorwave proali -i Zea_mays.AGPv4.34.gff3 -r Zea_mays.AGPv4.dna.toplevel.fa -as maize_cds.fa -a maize.banana.sam -ar maize_cds_maize.sam -s Mschizocarpa_chromosomes.fasta maize.cds.fa -n B73_banana.anchorspro -R 8 -Q 8 -t 18 -o maize.banana.maf
+
+
+maf-convert sam ara_grape.maf | samtools view -O BAM --reference tair10.fa | samtools sort > ara_grape.bam
+samtools depth ara_grape.bam | wc -l #60716993
+samtools depth ara_grape.bam | awk '$3>0 {print $0}' | wc -l #24203721
+
+maf-convert sam ara_tomato.maf | samtools view -O BAM --reference tair10.fa | samtools sort > ara_tomato.bam
+samtools depth ara_tomato.bam | wc -l # 43089773
+samtools depth ara_tomato.bam | awk '$3>0 {print $0}' | wc -l #15006753
+
+maf-convert sam ara_chocolate.maf | samtools view -O BAM --reference tair10.fa | samtools sort > ara_chocolate.bam
+samtools depth ara_chocolate.bam | wc -l # 73655808
+samtools depth ara_chocolate.bam | awk '$3>0 {print $0}' | wc -l #32461350
+
+
+maf-convert sam maize.rice.maf | samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa | samtools sort > maize.rice.bam
+samtools depth maize.rice.bam | wc -l #1819004347
+samtools depth maize.rice.bam | awk '$3>0 {print $0}' | wc -l #67749993
+
+
+maf-convert sam maize.banana.maf | samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa | samtools sort > maize.banana.bam
+samtools depth maize.banana.bam | wc -l # 247794291
+samtools depth maize.banana.bam | awk '$3>0 {print $0}' | wc -l # 1411470
+
+perl ../coutXamdEqualInsamfile.pl maize.rice.anchorwave.sam              
+total number of =:  45658055
+total number of X:  22091938
+
+perl ../coutXamdEqualInsamfile.pl maize.banana.anchorwave.sam
+total number of =:  814189
+total number of X:  726078
+
+perl ../coutXamdEqualInsamfile.pl ara_grape.anchorwave.sam             
+total number of =:  13195426
+total number of X:  11008295
+
+perl ../coutXamdEqualInsamfile.pl ara_chocolate.anchorwave.sam
+total number of =:	18501518
+total number of X:	13959832
+
+
+perl ../coutXamdEqualInsamfile.pl ara_tomato.anchorwave.sam
+total number of =:	8209326
+total number of X:	7984285
+
+
+samtools depth maize.rice.bam | wc -l  # 
+samtools depth maize.rice.bam | awk '$3>0{print $0}' | wc -l #
+1819004347
+67749993
+
+samtools depth maize.banana.bam | wc -l  # 
+samtools depth maize.banana.bam | awk '$3>0{print $0}' | wc -l #
+247794291
+1411470
+
+samtools depth ara_chocolate.bam | wc -l  # 
+samtools depth ara_chocolate.bam | awk '$3>0{print $0}' | wc -l #
+73655808
+32461350
+
+
+samtools depth ara_grape.bam | wc -l  # 
+samtools depth ara_grape.bam | awk '$3>0{print $0}' | wc -l #
+60716993
+24203721
+
+
+samtools depth ara_tomato.bam | wc -l  # 
+samtools depth ara_tomato.bam | awk '$3>0{print $0}' | wc -l #
+
+43089773
+15006753
+```

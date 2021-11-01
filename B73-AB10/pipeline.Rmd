@@ -167,10 +167,10 @@ p = ggplot(data=data, aes(x=x,y=y))+
         axis.ticks.y=element_blank())
 
 
-CairoPNG(file="inversionv2.png",width = 1280, height = 560)
+CairoPNG(file="inversionv2.png",width = 960, height = 560)
 p
 dev.off()
-CairoPDF(file="inversionv2.pdf",width = 16, height = 7)
+CairoPDF(file="inversionv2.pdf",width = 12, height = 7)
 p
 dev.off()
 

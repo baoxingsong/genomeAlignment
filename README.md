@@ -18,7 +18,6 @@ Please view the `pipeline.html` file under each folder using your web browser or
 7) [Alignment between the human (hg38) and the mouse (mm39) genome assembly](./hg38_mm39/).
 8) [Alignment between the human (hg38) and the chimpanzee (pro3) genome assembly](./humanpro3/).
 9) [Alignment between the goldfish and the zebrafish (GRCz10) genome assembly](./goldfish_zebrafish/).
-10) [Investigate the collinearity between the human (hg38) and the axolotl genome assembly](./huamn_axolotl/).
-11) [Investigate the collinearity between among a bunch of plant genome assemblies](./checkCollinearityAcroossAbunchOfPlantGenome/).
+10) [Investigate the collinearity between among a bunch of plant genome assemblies](./checkCollinearityAcroossAbunchOfPlantGenome/).
 
 If you have any question, please feel free to send E-mail to songbaoxing168@163.com.

@@ -1,0 +1,419 @@
+---
+title: ""
+author: "Baoxing Song"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+
+## Download genome sequences and reference GFF file
+
+```
+
+wget ftp://ftp.ensemblgenomes.org/pub/release-41/plants/gff3/glycine_max/Glycine_max.Glycine_max_v2.0.41.gff3.gz
+wget ftp://ftp.ensemblgenomes.org/pub/release-41/plants/fasta/glycine_max/dna/Glycine_max.Glycine_max_v2.0.dna.toplevel.fa.gz
+wget ftp://ftp.ensemblgenomes.org/pub/release-51/plants/fasta/phaseolus_vulgaris/dna/Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa.gz
+gunzip *gz
+```
+
+We do not have enough background knowledge to evaluate the genome alignment between soybean and wild soybean
+
+
+### Get full-length CDS in fasta format
+If you input files are compressed, please decompress them firstly.
+```
+anchorwave gff2seq -r Glycine_max.Glycine_max_v2.0.dna.toplevel.fa -i Glycine_max.Glycine_max_v2.0.41.gff3 -o gm.cds.fa
+```
+
+
+### Map full-length CDS to reference and query genomes
+-t is the number of thread for mapping, please adjust it according to your computational resource. \
+Empirically, the value of -k with 12 is a balance between mapping sensitivity and computational resource costing.
+```
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Glycine_max.Glycine_max_v2.0.dna.toplevel.fa gm.cds.fa > gm.sam
+minimap2 -x splice -t 11 -k 12 -a -p 0.4 -N 20 Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa gm.cds.fa > pv.sam
+
+```
+
+### Visualize the full-length CDS minimap2 mapping result
+Transform sam file into a plain file.
+```
+perl alignmentToDotplot.pl Glycine_max.Glycine_max_v2.0.41.gff3 pv.sam > pv.tab
+```
+
+Generate a plot
+```{r warning=FALSE, fig.height = 8.5, fig.width = 11.25}
+library(ggplot2)
+library(compiler)
+enableJIT(3)
+library(ggplot2)
+library("Cairo")
+changetoM <- function ( position ){
+  position=position/1000000;
+  paste(position, "M", sep="")
+}
+
+
+
+
+data =read.table("pv.tab")
+data = data[which(data$V1 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20")),]
+data = data[which(data$V3 %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11")),]
+data$V1 = factor(data$V1, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"))
+data$V3 = factor(data$V3, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"))
+p = ggplot(data=data, aes(x=V4, y=V2))+geom_point(size=0.5, aes(color=V5))+facet_grid(V1~V3, scales="free", space="free" )+ theme_grey(base_size = 20) +
+    labs(x="Common bean", y="Soybean")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+file = "pv.tab"
+png(paste(file, ".png", sep=""), width = 3000, height = 2000)
+print(p)
+dev.off()
+CairoPDF(paste(file, ".pdf", sep=""), width = 60, height = 40)
+p
+dev.off()
+```
+
+
+### By looking at the above plot, we chose the following parameters for genome alignment. \
+
+```
+/usr/bin/time ./AnchorWave/anchorwave proali -i Glycine_max.Glycine_max_v2.0.41.gff3 -r Glycine_max.Glycine_max_v2.0.dna.toplevel.fa -as gm.cds.fa -a pv.sam -ar gm.sam -s Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa -n pv.anchors -o pv.maf -t 19 -f pv.f.maf -R 1 -Q 2 -e 2 >pv.log 2>&1
+```
+
+
+bedtools merge -i Soybean_10days_leaf_ACRs.bed > Soybean_10days_leaf_ACRs_uniq.bed
+bedtools sort -i Gm.RM_TE_annotations.bed | bedtools merge > Gm.RM_TE_annotations_uniq.bed
+
+
+
+
+```
+
+#soybean cir-regulatory elements annotations are downloaded from https://www-ncbi-nlm-nih-gov.proxy.library.cornell.edu/geo/query/acc.cgi?acc=GSE128434
+#Gm.RM_TE_annotations.bed was mentioned in the same paper, but did not released. I got it by personally communication with Alex Marand 
+
+
+maf-convert sam pv.maf | samtools view -O BAM --reference Glycine_max.Glycine_max_v2.0.dna.toplevel.fa - | samtools sort - > pv.bam
+samtools mpileup pv.bam | wc -l   # 763782356
+samtools depth pv.bam | awk '$3>0{print $0}' | wc -l  # 277666121
+samtools depth pv.bam -b Soybean_10days_leaf_ACRs.bed | wc -l  # 6893448
+samtools depth pv.bam -b Soybean_10days_leaf_ACRs.bed | awk '$3>0{print $0}' | wc -l    # 4525862
+samtools depth pv.bam -b Gm.RM_TE_annotations.bed | wc -l # 248380917
+samtools depth pv.bam -b Gm.RM_TE_annotations.bed | awk '$3>0{print $0}' | wc -l  # 17595403
+
+
+```
+
+```{r  warning=FALSE, fig.height = 8.5, fig.width = 11.25}
+library(ggplot2)
+library(compiler)
+enableJIT(3)
+library(ggplot2)
+library("Cairo")
+changetoM <- function ( position ){
+  position=position/1000000;
+  paste(position, "M", sep="")
+}
+
+
+
+data =read.table("pv.anchors", head=TRUE)
+data = data[which(data$refChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20")),]
+data = data[which(data$queryChr %in% c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11")),]
+data$refChr = factor(data$refChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"))
+data$queryChr = factor(data$queryChr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"))
+p = ggplot(data=data, aes(x=queryStart, y=referenceStart))+geom_point(size=0.5, aes(color=strand))+facet_grid(refChr~queryChr, scales="free", space="free" )+ theme_grey(base_size = 20) +
+    labs(x="Common bean", y="Soybean")+scale_x_continuous(labels=changetoM) + scale_y_continuous(labels=changetoM) +
+    theme(axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
+          axis.text.y = element_text( colour = "black"),
+          legend.position='none',
+          axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black") )
+
+CairoPDF(file="pv.anchors.pdf", width = 60, height = 40)
+p
+dev.off()
+png(file="pv.anchors.png", width = 3000, height = 2000)
+print(p)
+dev.off()
+```
+
+
+
+```
+
+/usr/bin/time minimap2 -x asm5 -t 85 -a Glycine_max.Glycine_max_v2.0.dna.toplevel.fa Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa > minimap2_asm5_pv.sam 2> minimap2_asm5_pv.log
+
+/usr/bin/time minimap2 -x asm10 -t 85 -a Glycine_max.Glycine_max_v2.0.dna.toplevel.fa Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa > minimap2_asm10_pv.sam 2> minimap2_asm10_pv.log
+
+/usr/bin/time minimap2 -x asm20 -t 85 -a Glycine_max.Glycine_max_v2.0.dna.toplevel.fa Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa > minimap2_asm20_pv.sam 2> minimap2_asm20_pv.log
+
+samtools sort minimap2_asm5_pv.sam > minimap2_asm5_pv.bam
+samtools sort minimap2_asm10_pv.sam > minimap2_asm10_pv.bam
+samtools sort minimap2_asm20_pv.sam > minimap2_asm20_pv.bam
+
+
+
+
+samtools depth minimap2_asm5_pv.bam | wc -l # 112950
+samtools depth minimap2_asm5_pv.bam | awk '$3>0{print $0}' | wc -l # 112771
+samtools depth minimap2_asm5_pv.bam -b Soybean_10days_leaf_ACRs.bed | wc -l # 340
+samtools depth minimap2_asm5_pv.bam -b Soybean_10days_leaf_ACRs.bed | awk '$3>0{print $0}' | wc -l  # 336
+samtools depth minimap2_asm5_pv.bam -b Gm.RM_TE_annotations.bed | wc -l #  3207
+samtools depth minimap2_asm5_pv.bam -b Gm.RM_TE_annotations.bed | awk '$3>0{print $0}' | wc -l  # 3207
+
+samtools depth minimap2_asm10_pv.bam | wc -l # 3833988
+samtools depth minimap2_asm10_pv.bam | awk '$3>0{print $0}' | wc -l # 3804008
+samtools depth minimap2_asm10_pv.bam -b Soybean_10days_leaf_ACRs.bed | wc -l # 13541
+samtools depth minimap2_asm10_pv.bam -b Soybean_10days_leaf_ACRs.bed | awk '$3>0{print $0}' | wc -l  # 13359
+samtools depth minimap2_asm10_pv.bam -b Gm.RM_TE_annotations.bed | wc -l #  94762
+samtools depth minimap2_asm10_pv.bam -b Gm.RM_TE_annotations.bed | awk '$3>0{print $0}' | wc -l  # 94360
+
+samtools depth minimap2_asm20_pv.bam | wc -l # 30524372
+samtools depth minimap2_asm20_pv.bam | awk '$3>0{print $0}' | wc -l # 29075148
+samtools depth minimap2_asm20_pv.bam -b Soybean_10days_leaf_ACRs.bed | wc -l # 398690
+samtools depth minimap2_asm20_pv.bam -b Soybean_10days_leaf_ACRs.bed | awk '$3>0{print $0}' | wc -l  # 382889
+samtools depth minimap2_asm20_pv.bam -b Gm.RM_TE_annotations.bed | wc -l #  719467
+samtools depth minimap2_asm20_pv.bam -b Gm.RM_TE_annotations.bed | awk '$3>0{print $0}' | wc -l  # 683307
+
+
+
+
+
+
+
+
+lastdb -P 80 soybean Glycine_max.Glycine_max_v2.0.dna.toplevel.fa
+faToTwoBit Glycine_max.Glycine_max_v2.0.dna.toplevel.fa soybean.2bit
+faSize -detailed Glycine_max.Glycine_max_v2.0.dna.toplevel.fa > soybean.size
+
+
+
+lastal -P10 soybean Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa > pv_lastal.maf
+faSize -detailed Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa > pv.size
+faToTwoBit Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa pv.2bit
+python2 /programs/last-932/bin/maf-convert psl pv_lastal.maf > pv_lastal.psl
+
+axtChain -linearGap=loose -psl pv_lastal.psl -faQ -faT Glycine_max.Glycine_max_v2.0.dna.toplevel.fa Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa pv_lastal.chain
+chainMergeSort pv_lastal.chain > pv_lastal.all.chain
+chainPreNet pv_lastal.all.chain soybean.size pv.size pv_lastal.preNet
+chainNet pv_lastal.preNet soybean.size pv.size pv_lastal.refTarget.net pv_lastal.chainNet
+netToAxt pv_lastal.refTarget.net pv_lastal.preNet soybean.2bit pv.2bit stdout | axtSort stdin pv_lastal.axt
+axtToMaf pv_lastal.axt soybean.size pv.size pv_lastal_final.maf -qPrefix=pv. -tPrefix=soybean.
+perl lastFinalToSplit.pl pv_lastal_final.maf > pv_lastal_final_forsplit.maf
+
+cat pv_lastal.maf | last-split | maf-swap | last-split | maf-swap > pv_lastal_split.maf
+cat pv_lastal_final_forsplit.maf | last-split | maf-swap | last-split | maf-swap > pv_lastal_final_split.maf
+perl lastToMafComparsion.pl pv_lastal_split.maf > pv_lastal_split_Comparator.maf
+perl lastToMafComparsion.pl pv_lastal_final_split.maf > pv_lastal_final_split_Comparator.maf
+
+
+maf-convert sam pv_lastal.maf > pv_lastal.sam
+sed -i 's/[0-9]\+H//g' pv_lastal.sam
+samtools view -O BAM --reference Glycine_max.Glycine_max_v2.0.dna.toplevel.fa pv_lastal.sam | samtools sort - > pv_lastal.bam; samtools index pv_lastal.bam  # this is the many-to-many alignment
+
+
+samtools depth pv_lastal.bam | wc -l # 327856135
+samtools depth pv_lastal.bam | awk '$3>0{print $0}' | wc -l # 322930509
+samtools depth pv_lastal.bam -b Soybean_10days_leaf_ACRs.bed | wc -l # 3768048
+samtools depth pv_lastal.bam -b Soybean_10days_leaf_ACRs.bed | awk '$3>0{print $0}' | wc -l  #  3657770
+samtools depth pv_lastal.bam -b Gm.RM_TE_annotations.bed | wc -l # 85838202
+samtools depth pv_lastal.bam -b Gm.RM_TE_annotations.bed | awk '$3>0{print $0}' | wc -l  # 85604712
+
+
+
+
+maf-convert sam pv_lastal_final.maf > pv_lastal_final.sam # this many to one
+sed -i 's/soybean.//g' pv_lastal_final.sam
+sed -i 's/pv.//g' pv_lastal_final.sam
+sed -i 's/[0-9]\+H//g' pv_lastal_final.sam
+samtools view -O BAM --reference Glycine_max.Glycine_max_v2.0.dna.toplevel.fa pv_lastal_final.sam | samtools sort - > pv_lastal_final.bam; samtools index pv_lastal_final.bam
+samtools depth pv_lastal_final.bam | wc -l  # 307548780
+samtools depth pv_lastal_final.bam | awk '$3>0{print $0}' | wc -l  # 300175016
+samtools depth pv_lastal_final.bam -b Soybean_10days_leaf_ACRs.bed | wc -l # 3649192
+samtools depth pv_lastal_final.bam -b Soybean_10days_leaf_ACRs.bed | awk '$3>0{print $0}' | wc -l  #  3516892
+samtools depth pv_lastal_final.bam -b Gm.RM_TE_annotations.bed | wc -l # 79711288
+samtools depth pv_lastal_final.bam -b Gm.RM_TE_annotations.bed | awk '$3>0{print $0}' | wc -l  # 78947006
+
+
+
+
+maf-convert sam pv_lastal_final_split_Comparator.maf > pv_lastal_final_split_Comparator.sam  # one-to-one
+sed -i 's/soybean.//g' pv_lastal_final_split_Comparator.sam
+sed -i 's/pv.//g' pv_lastal_final_split_Comparator.sam
+sed -i 's/[0-9]\+H//g' pv_lastal_final_split_Comparator.sam
+samtools view -O BAM --reference Glycine_max.Glycine_max_v2.0.dna.toplevel.fa pv_lastal_final_split_Comparator.sam | samtools sort - > pv_lastal_final_split_Comparator.bam; samtools index pv_lastal_final_split_Comparator.bam
+
+samtools depth pv_lastal_final_split_Comparator.bam | wc -l # 99094830
+samtools depth pv_lastal_final_split_Comparator.bam | awk '$3>0{print $0}' | wc -l # 96911362
+samtools depth pv_lastal_final_split_Comparator.bam -b Soybean_10days_leaf_ACRs.bed | wc -l # 1761365
+samtools depth pv_lastal_final_split_Comparator.bam -b Soybean_10days_leaf_ACRs.bed | awk '$3>0{print $0}' | wc -l  # 1707957
+samtools depth pv_lastal_final_split_Comparator.bam -b Gm.RM_TE_annotations.bed | wc -l #  16851601
+samtools depth pv_lastal_final_split_Comparator.bam -b Gm.RM_TE_annotations.bed | awk '$3>0{print $0}' | wc -l  # 16733119
+
+
+
+
+
+
+
+
+
+/usr/bin/time /home/bs674/software/bin/nucmer -t 1 --sam-short=pv.short.sam Glycine_max.Glycine_max_v2.0.dna.toplevel.fa Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa > pv.nucmer.log 2>&1
+
+cat pv.short.sam | grep -v "@" | samtools view -O BAM --reference Glycine_max.Glycine_max_v2.0.dna.toplevel.fa - | samtools sort - > pv.short.bam
+samtools index pv.short.bam
+samtools depth pv.short.bam | wc -l   # 60485325
+samtools depth pv.short.bam | awk '$3>0{print $0}' | wc -l  #59208084
+samtools depth pv.short.bam -b Soybean_10days_leaf_ACRs.bed | wc -l # 900721
+samtools depth pv.short.bam -b Soybean_10days_leaf_ACRs.bed | awk '$3>0{print $0}' | wc -l # 878336
+samtools depth pv.short.bam -b Gm.RM_TE_annotations.bed | wc -l # 1317313
+samtools depth pv.short.bam -b Gm.RM_TE_annotations.bed | awk '$3>0{print $0}' | wc -l  # 1298143
+
+/usr/bin/time /home/bs674/software/GSAlign-1.0.22/bin/GSAlign -r Glycine_max.Glycine_max_v2.0.dna.toplevel.fa -q Phaseolus_vulgaris.PhaVulg1_0.dna.toplevel.fa -t 10 -o pv_gsalign -fmt 1 > pv.log 2>&1
+maf-convert sam pv_gsalign.maf | sed 's/qry.//g' | sed 's/ref.//g' | samtools view -O BAM --reference Glycine_max.Glycine_max_v2.0.dna.toplevel.fa - | samtools sort - > pv_gsalign.bam
+
+samtools index pv_gsalign.bam
+samtools depth pv_gsalign.bam | wc -l   # 15613910
+samtools depth pv_gsalign.bam | awk '$3>0{print $0}' | wc -l  #15049819
+samtools depth pv_gsalign.bam -b Soybean_10days_leaf_ACRs.bed | wc -l # 173623
+samtools depth pv_gsalign.bam -b Soybean_10days_leaf_ACRs.bed | awk '$3>0{print $0}' | wc -l # 167188
+samtools depth pv_gsalign.bam -b Gm.RM_TE_annotations.bed | wc -l # 348979
+samtools depth pv_gsalign.bam -b Gm.RM_TE_annotations.bed | awk '$3>0{print $0}' | wc -l  # 339138
+```
+
+
+```{r warning=FALSE, fig.height = 8.5, fig.width = 11.25}
+TE = read.table("Gm.RM_TE_annotations_uniq.bed")
+TE$len = TE$V3-TE$V2
+TETotalLength = sum(abs(TE$len))
+
+ACR = read.table("Soybean_10days_leaf_ACRs_uniq.bed")
+ACR$len = ACR$V3-ACR$V2
+ACRTotalLength = sum(abs(ACR$len))
+
+
+library(ggplot2)
+data = read.table("pv.summaryData", header=TRUE, sep="\t")
+data$recall = data$depth_covered_bed / ACRTotalLength
+
+data$non_TFBS_matches = data$depth_covered - data$depth_covered_bed
+data$non_TFBS = data$depth - data$depth_bed
+
+
+data$enrichment = (data$depth_covered_bed/data$depth_bed)/(data$non_TFBS_matches/data$non_TFBS)
+
+
+data$approach <- factor(data$approach, levels = c("AnchorWave", "minimap2_asm5", "minimap2_asm10", "minimap2_asm20", "LAST many-to-many", "LAST many-to-one", "LAST one-to-one", "MUMmer4", "GSAlign"))
+data$software <- factor(data$software, levels = c("AnchorWave", "minimap2", "LAST", "MUMmer4", "GSAlign"))
+shape = c(16, 17, 17, 17,  15, 15, 15, 3, 7)
+
+myColors <- c("#F8766D", "#D89000", "#A3A500", "#39B600", "#00BFC4", "#00B0F6", "#9590FF", "#E76BF3", "#FF62BC")
+names(myColors) <- levels(data$approach)
+colScale <- scale_colour_manual(name = "grp",values = myColors)
+fillScale <- scale_fill_manual(name = "grp",values = myColors)
+
+print(data)
+
+p = ggplot(data=data, aes(x=recall, y=enrichment, color=approach, shape=software)) + geom_point(size=5, alpha=0.8) + 
+guides(colour = guide_legend(override.aes = list(shape = shape))) +scale_shape(guide = FALSE)+ colScale+fillScale+
+  labs(x="ACR recall", y="Position match ratio in ACR\nalignment to position match ratio\n in non-ACR alignment", title="")+ xlim(0, 1) + ylim(0.5, 2.0) +
+            theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+              legend.title = element_blank(),
+              axis.line = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+            panel.background = element_blank(),
+            axis.text.y = element_text( colour = "black"),
+            axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+file = "pv.ACR_quality_control"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+
+
+
+totalGenomeLength = read.table("Glycine_max.Glycine_max_v2.0.dna.toplevel.fa.fai")
+totalGenomeLength = sum(totalGenomeLength$V2)
+data$coverage = data$depth/totalGenomeLength
+
+dat = rbind( data.frame(approach=data$approach, proportion=data$depth_covered/totalGenomeLength, category = "position match"), data.frame(approach=data$approach, proportion=(data$depth-data$depth_covered)/totalGenomeLength, category = "gap"),  data.frame(approach=data$approach, proportion=(totalGenomeLength-data$depth)/totalGenomeLength, category = "unaligned") )
+
+
+dat = rbind( 
+data.frame(approach=data$approach, proportion=(data$depth_covered-data$TE_covered)/totalGenomeLength, c="6non-TE position match", category = "position match", region="Non-TE_PAV"), 
+data.frame(approach=data$approach, proportion=data$TE_covered/totalGenomeLength, c="5TE position match", category = "position match", region="TE_PAV"), 
+data.frame(approach=data$approach, proportion=(data$depth-data$depth_covered - data$TE  + data$TE_covered)/totalGenomeLength, c="3non-TE gap", category = "gap", region="Non-TE_PAV"),  
+data.frame(approach=data$approach, proportion=(data$TE-data$TE_covered)/totalGenomeLength, c="4TE gap", category = "gap", region="TE_PAV"),
+data.frame(approach=data$approach, proportion=(totalGenomeLength-data$depth-TETotalLength+data$TE)/totalGenomeLength, c="2non-TE unaligned", category = "unaligned", region="Non-TE_PAV"),
+data.frame(approach=data$approach, proportion=(TETotalLength-data$TE)/totalGenomeLength, c="1TE unaligned", category = "unaligned", region="TE_PAV") )
+
+dat$category = factor(dat$category, levels=c("unaligned", "gap", "position match"))
+dat$c = factor(dat$c, levels=c("1TE unaligned", "2non-TE unaligned", "3non-TE gap", "4TE gap", "5TE position match", "6non-TE position match"))
+dat$region = factor(dat$region)
+print(dat)
+
+library(ggpattern)
+p = ggplot(data=dat, aes(x=approach, y=proportion, fill=c, pattern = region)) + geom_bar(stat="identity")  + scale_fill_manual(values=c("#54AEE1","#54AEE1", "#92A000",  "#92A000", "#EF8600", "#EF8600")) + guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+  labs(x="", y="Proportion of soybean \n genome aligned to common bean", title="")+
+   geom_bar_pattern( stat="identity", color = "black",  pattern_fill = "black",
+                   pattern_angle = 45,
+                   pattern_density = 0.1,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.6) +
+                   scale_pattern_manual(values = c(TE_PAV = "stripe", TE_PAV = "none")) +
+            theme_bw() +theme_grey(base_size = 24) + theme(
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.title = element_blank(),
+              axis.line = element_blank(),
+        legend.position = "top",
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+        
+            panel.background = element_blank(),
+            axis.text.y = element_text( colour = "black"),
+            axis.text.x = element_text(angle=300, hjust=0, vjust=1, colour = "black"))
+
+print(p)
+
+file = "pv_genome_aligned_v2"
+png(paste(file, ".png", sep=""), width=720, height=560)
+print(p)
+dev.off()
+
+pdf(paste(file, ".pdf", sep=""), width=9, height=7)
+print(p)
+dev.off()
+
+data$non_TE_matches = data$depth_covered - data$TE_covered
+data$enrichment_TE = (data$TE_covered/TETotalLength)/(data$non_TE_matches/(totalGenomeLength-TETotalLength))
+print(data)
+```
+
+
+
+
+
+perl ../coutXamdEqualInsamfile.pl pv.maf.sam    
+total number of =:  188910204
+total number of X:  88755917

@@ -101,11 +101,11 @@ samtools index mm39.bam
 samtools index mm39_noY.bam
 
 
-samtools depth mm39.bam | wc -l   # 2626401667
-samtools depth mm39.bam | awk '$3>0 {print $0}' | wc -l # 898282066
+samtools depth mm39.bam | wc -l   # 2620774590
+samtools depth mm39.bam | awk '$3>0 {print $0}' | wc -l # 896442693
 
-samtools depth mm39_noY.bam | wc -l  # 2619366741
-samtools depth mm39_noY.bam | awk '$3>0 {print $0}' | wc -l  # 898205502
+samtools depth mm39_noY.bam | wc -l  # 2613739664
+samtools depth mm39_noY.bam | awk '$3>0 {print $0}' | wc -l  # 896366129
 
 
 
@@ -125,11 +125,11 @@ samtools sort mm392_noY_no_sort.bam --write-index --output-fmt BAM --reference h
 samtools index mm392.bam  
 samtools index mm392_noY.bam
 
-samtools depth mm392.bam | wc -l   # 2615637279
-samtools depth mm392.bam | awk '$3>0 {print $0}' | wc -l # 892068996
+samtools depth mm392.bam | wc -l   # 2613745682
+samtools depth mm392.bam | awk '$3>0 {print $0}' | wc -l # 891903043
 
-samtools depth mm392_noY.bam | wc -l  # 2615637279
-samtools depth mm392_noY.bam | awk '$3>0 {print $0}' | wc -l  # 892068996
+samtools depth mm392_noY.bam | wc -l  # 2613745682
+samtools depth mm392_noY.bam | awk '$3>0 {print $0}' | wc -l  # 891903043
 
 
 ```
@@ -169,8 +169,8 @@ bedtools sort -i encodeCcreCombined.bed | bedtools merge | grep -v "^Y" > encode
 samtools depth -b encodeCcreCombined_merged.bed mm39_noY.bam | wc -l  # 237087412
 samtools depth -b encodeCcreCombined_merged.bed mm39_noY.bam | awk '$3>0 {print $0}' | wc -l  # 121138626
 
-samtools depth -b encodeCcreCombined_merged.bed mm392_noY.bam | wc -l  # 234830066
-samtools depth -b encodeCcreCombined_merged.bed mm392_noY.bam | awk '$3>0 {print $0}' | wc -l  # 121152422
+samtools depth -b encodeCcreCombined_merged.bed mm392_noY.bam | wc -l  # 234705085
+samtools depth -b encodeCcreCombined_merged.bed mm392_noY.bam | awk '$3>0 {print $0}' | wc -l  # 121132426
 
 samtools depth -b encodeCcreCombined_merged.bed hg38.mm39.synNet_noY.bam | wc -l # 147255034
 samtools depth -b encodeCcreCombined_merged.bed hg38.mm39.synNet_noY.bam | awk '$3>0 {print $0}' | wc -l   # 131681625
@@ -213,5 +213,12 @@ print(p)
 dev.off()
 ```
 
+ perl ../coutXamdEqualInsamfile.pl mm39_noY.sam              
+total number of =:	632237869
+total number of X:	265967633
 
+
+perl ../coutXamdEqualInsamfile.pl mm392_noY.sam
+total number of =:	633903141
+total number of X:	257999902
 

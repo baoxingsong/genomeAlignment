@@ -1,22 +1,28 @@
 approach	proportion	category
-minimap2_asm5	7380	gap
-minimap2_asm5	1344959	position match
-minimap2_asm5	1370367044	unaligned
-minimap2_asm10	77766	gap
-minimap2_asm10	6326191	position match
-minimap2_asm10	1365315426	unaligned
-minimap2_asm20	877033	gap
-minimap2_asm20	34973788	position match
-minimap2_asm20	1335868562	unaligned
-AnchorWave	863424073	gap
-AnchorWave	270623589	position match
-AnchorWave	237671721	unaligned
-MUMmer4	1072018	gap
-MUMmer4	93307218	position match
-MUMmer4	1277340147	unaligned
-LAST one-to-one	3071519	gap
-LAST one-to-one	260653540	position match
-LAST one-to-one	1107994324	unaligned
-GSAlign	483835	gap
-GSAlign	19590370	position match
-GSAlign	1351645178	unaligned
+minimap2_asm5	7397	gap
+minimap2_asm5	1343192	position match
+minimap2_asm5	1372120795	unaligned
+minimap2_asm10	77336	gap
+minimap2_asm10	6329847	position match
+minimap2_asm10	1367064201	unaligned
+minimap2_asm20	878870	gap
+minimap2_asm20	35002774	position match
+minimap2_asm20	1337589740	unaligned
+AnchorWave	831728320	gap
+AnchorWave	313676584	position match
+AnchorWave	228066480	unaligned
+MUMmer4	1073087	gap
+MUMmer4	93794614	position match
+MUMmer4	1278603683	unaligned
+LAST+many-to-many	3430984	gap
+LAST+many-to-many	624893762	position match
+LAST+many-to-many	745146638	unaligned
+LAST+many-to-one	5264748	gap
+LAST+many-to-one	587452812	position match
+LAST+many-to-one	780753824	unaligned
+LAST+one-to-one	3072007	gap
+LAST+one-to-one	261043159	position match
+LAST+one-to-one	1112428225	unaligned
+GSAlign	484907	gap
+GSAlign	19553866	position match
+GSAlign	1353432611	unaligned
