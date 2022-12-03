@@ -61,20 +61,20 @@ samtools depth anchorwave.bam -b ../b73to-ara/B73.structuralTEv2.disjoined.2018-
 
 ## augustus maize model predicted annotation
 ```
-maf-convert sam alignmentara.maf | sed 's/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.//g' | sed 's/Zea_mays.AGPv4.dna.toplevel.fa.//g' | samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa - | samtools sort - > anchorwave.bam
-samtools mpileup anchorwave.bam | wc -l  #1732110851
-samtools depth anchorwave.bam | wc -l   #1732110851
-samtools depth anchorwave.bam | awk '$3>0{print $0}' | wc -l #128022971
-samtools depth anchorwave.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l #1206887848
-samtools depth anchorwave.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l # 26876801
-```
-
-## augustus arabidopsis model predicted annotation
-```
 maf-convert sam alignmentmaize.maf | sed 's/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.//g' | sed 's/Zea_mays.AGPv4.dna.toplevel.fa.//g' | samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa - | samtools sort - > anchorwave.bam
 samtools mpileup anchorwave.bam | wc -l  #1891858585
 samtools depth anchorwave.bam | wc -l   #1891858585
 samtools depth anchorwave.bam | awk '$3>0{print $0}' | wc -l#125648374
 samtools depth anchorwave.bam -b ../b73to-ara/B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l#1323846307
 samtools depth anchorwave.bam -b ../b73to-ara/B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l #27105038
+```
+
+## augustus arabidopsis model predicted annotation
+```
+maf-convert sam alignmentara.maf | sed 's/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.//g' | sed 's/Zea_mays.AGPv4.dna.toplevel.fa.//g' | samtools view -O BAM --reference Zea_mays.AGPv4.dna.toplevel.fa - | samtools sort - > anchorwave.bam
+samtools mpileup anchorwave.bam | wc -l  #1732110851
+samtools depth anchorwave.bam | wc -l   #1732110851
+samtools depth anchorwave.bam | awk '$3>0{print $0}' | wc -l #128022971
+samtools depth anchorwave.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | wc -l #1206887848
+samtools depth anchorwave.bam -b B73.structuralTEv2.disjoined.2018-09-19.bed | awk '$3>0{print $0}' | wc -l # 26876801
 ```
